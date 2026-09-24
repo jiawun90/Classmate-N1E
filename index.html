@@ -48,7 +48,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       background-image: repeating-linear-gradient(90deg, #c4b5fd 0 10px, transparent 10px 18px);
       height: 2px;
     }
-    .sticker-shadow { box-shadow: 0 6px 0 rgba(0,0,0,0.05), 0 10px 18px -6px var(--tone-shadow, rgba(109,40,217,.18)); }
+    .sticker-shadow { box-shadow: 0 6px 0 rgba(0,0,0,0.05), 0 10px 18px -6px var(--tone-shadow, rgba(109,40,217,.18)); position: relative; z-index: 0; }
+    .action-row { position: relative; z-index: 20; pointer-events: auto; }
+    .action-row button { min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
     @keyframes confetti-fall {
       0% { transform: translateY(0) rotate(0deg); opacity: 1; }
       100% { transform: translateY(-70px) rotate(var(--rot, 180deg)); opacity: 0; }
@@ -206,6 +208,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const trimmed = (name || "?").trim();
     return trimmed ? trimmed[0].toUpperCase() : "?";
   }
+  function sameId(a, b) {
+    return a != null && b != null && String(a) === String(b);
+  }
   const PRESET_EMOJIS = ["❤️", "👍", "😂", "🎉"];
   function avatarHtml(userId, name, sizeClass) {
     const p = profilesCache[userId];
@@ -322,19 +327,32 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!currentUser || !supabaseClient) return;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
     const replyId = replyingTo ? replyingTo.id : null;
+    const tempId = "temp-" + Date.now();
+    const optimistic = {
+      id: tempId,
+      user_id: currentUser.id,
+      user_name: userName,
+      content: payload.content || "",
+      image_url: payload.image_url || null,
+      audio_url: payload.audio_url || null,
+      reply_to: replyId,
+      created_at: new Date().toISOString(),
+    };
+    addRealtimeMessage(optimistic);
+    cancelReply();
     const { data, error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
-      content: "",
+      content: payload.content || "",
       reply_to: replyId,
       ...payload,
     }).select("*").single();
+    latestRows = latestRows.filter((m) => String(m.id) !== tempId);
     if (error) {
+      renderMessages(latestRows);
       alert(error.message);
       return;
     }
-    cancelReply();
-    // Realtime will also deliver this row; addRealtimeMessage de-duplicates by id.
     addRealtimeMessage(data);
     await saveReadState(data.created_at);
   }
@@ -642,12 +660,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   async function toggleReaction(messageId, emoji) {
     if (!currentUser || !supabaseClient) return;
-    const existing = reactionsCache.find((r) => r.message_id === messageId && r.user_id === currentUser.id && r.emoji === emoji);
+    const existing = reactionsCache.find((r) => sameId(r.message_id, messageId) && r.user_id === currentUser.id && r.emoji === emoji);
     if (existing) {
       reactionsCache = reactionsCache.filter((r) => r.id !== existing.id);
       renderMessages(latestRows);
       const { error } = await supabaseClient.from("message_reactions").delete().eq("id", existing.id);
-      if (error) { console.warn(error); loadReactions().then(() => renderMessages(latestRows)); }
+      if (error) { alert(error.message); loadReactions().then(() => renderMessages(latestRows)); }
     } else {
       const temp = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUser.id, emoji };
       reactionsCache.push(temp);
@@ -658,6 +676,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (error) {
         reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
         renderMessages(latestRows);
+        alert(error.message);
       } else if (data) {
         reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
         if (!reactionsCache.some((r) => r.id === data.id)) reactionsCache.push(data);
@@ -674,7 +693,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return "";
   }
   function startReply(id) {
-    const m = latestRows.find((x) => x.id === id);
+    const m = latestRows.find((x) => sameId(x.id, id));
     if (!m) return;
     const author = m.user_id === currentUser.id ? "yourself" : (m.user_name || "Friend");
     replyingTo = { id: m.id, author, preview: messagePreview(m) };
@@ -690,11 +709,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   // ---------- Delete own message ----------
   async function deleteMessage(id) {
-    const m = latestRows.find((x) => x.id === id);
+    const m = latestRows.find((x) => sameId(x.id, id));
     if (!m || m.user_id !== currentUser.id) return;
     if (!confirm("Delete this message?")) return;
-    deleteRealtimeMessage({ id });
-    const { error } = await supabaseClient.from("messages").delete().eq("id", id);
+    deleteRealtimeMessage({ id: m.id });
+    const { error } = await supabaseClient.from("messages").delete().eq("id", m.id);
     if (error) { alert(error.message); await loadMessages(); return; }
     // Best-effort cleanup of any attached media file (ignored if it fails).
     const mediaUrl = m.image_url || m.audio_url;
@@ -778,12 +797,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   document.getElementById("messageList").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
+    if (!btn || !document.getElementById("messageList").contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const action = btn.getAttribute("data-action");
+    const id = btn.getAttribute("data-id");
+    const emoji = btn.getAttribute("data-emoji");
     if (action === "reply") startReply(id);
     else if (action === "delete") deleteMessage(id);
-    else if (action === "react-toggle") toggleReaction(id, btn.dataset.emoji);
+    else if (action === "react-toggle") toggleReaction(id, emoji);
   });
 
   function renderMessages(rows) {
@@ -831,7 +853,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
       const parts = [];
       if (m.reply_to) {
-        const orig = latestRows.find((x) => x.id === m.reply_to);
+        const orig = latestRows.find((x) => sameId(x.id, m.reply_to));
         const origAuthor = orig ? (orig.user_id === currentUser.id ? "You" : (orig.user_name || "Friend")) : "a message";
         const origPreview = orig ? messagePreview(orig) : "";
         parts.push(`<div class="mb-1.5 rounded-xl border-l-4 border-violet-300 px-2 py-1 text-xs font-bold ${mine ? "bg-white/15 text-violet-100" : "bg-black/5 text-violet-500"}">↪ ${escapeHtml(origAuthor)}: ${escapeHtml(origPreview)}</div>`);
@@ -845,7 +867,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
 
       const reactionRow = PRESET_EMOJIS.map((emoji) => {
-        const matches = reactionsCache.filter((r) => r.message_id === m.id && r.emoji === emoji);
+        const matches = reactionsCache.filter((r) => sameId(r.message_id, m.id) && r.emoji === emoji);
         const mineReacted = matches.some((r) => r.user_id === currentUser.id);
         const countLabel = matches.length ? ` ${matches.length}` : "";
         const style = matches.length
@@ -855,10 +877,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }).join("");
 
       const actionRow = `
-        <div class="mt-1 flex items-center gap-1 px-1">
+        <div class="action-row mt-1 flex flex-wrap items-center gap-1 px-1">
           ${reactionRow}
-          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-xs font-bold text-violet-400 hover:bg-violet-50">↩</button>
-          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-xs font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
+          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-sm font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-sm font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
       const bubble = `
@@ -893,8 +915,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function addRealtimeMessage(row) {
     if (!row) return;
-    const list = document.getElementById("messageList");
-    const exists = latestRows.some((m) => m.id === row.id);
+    const exists = latestRows.some((m) => sameId(m.id, row.id));
     if (exists) return;
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
@@ -906,7 +927,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   function deleteRealtimeMessage(oldRow) {
-    latestRows = latestRows.filter((m) => m.id !== oldRow.id);
+    latestRows = latestRows.filter((m) => !sameId(m.id, oldRow.id));
     renderMessages(latestRows);
   }
 
