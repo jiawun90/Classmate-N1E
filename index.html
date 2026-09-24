@@ -54,6 +54,16 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       100% { transform: translateY(-70px) rotate(var(--rot, 180deg)); opacity: 0; }
     }
     .confetti-bit { position: fixed; z-index: 60; pointer-events: none; border-radius: 2px; animation: confetti-fall .7s ease-out forwards; }
+    #messageList { scrollbar-width: thin; scrollbar-color: #c4b5fd transparent; }
+    #messageList::-webkit-scrollbar { width: 8px; }
+    #messageList::-webkit-scrollbar-track { background: transparent; }
+    #messageList::-webkit-scrollbar-thumb {
+      background-color: #c4b5fd;
+      border-radius: 999px;
+      border: 2px solid #fff6e8;
+      background-clip: padding-box;
+    }
+    #messageList::-webkit-scrollbar-thumb:hover { background-color: #a78bfa; }
     @media (prefers-reduced-motion: reduce) {
       .float, .msg-in, .confetti-bit { animation: none !important; }
     }
