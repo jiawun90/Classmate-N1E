@@ -255,13 +255,19 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   async function sendMessage(payload) {
     if (!currentUser || !supabaseClient) return;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-    const { error } = await supabaseClient.from("messages").insert({
+    const { data, error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
       content: "",
       ...payload,
-    });
-    if (error) alert(error.message);
+    }).select("*").single();
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    // Realtime will also deliver this row; addRealtimeMessage de-duplicates by id.
+    addRealtimeMessage(data);
+    await saveReadState(data.created_at);
   }
 
   document.getElementById("sendForm").onsubmit = async (e) => {
@@ -373,7 +379,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   }
 
-  let seenMessageIds = new Set();
+  // Messages are displayed newest-first. Each signed-in account keeps its own
+  // read position in Supabase, so unread messages survive refresh/device changes.
+  let lastReadAt = null;
+  let realtimeChannel = null;
+  let presenceChannel = null;
+  let latestRows = [];
 
   function dayLabel(iso) {
     const date = new Date(iso);
@@ -386,40 +397,60 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
+  async function loadReadState() {
+    if (!currentUser) return;
+    const { data, error } = await supabaseClient
+      .from("message_read_state")
+      .select("last_read_at")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.warn("Read state unavailable. Run the supplied SQL migration.", error);
+      lastReadAt = null;
+      return;
+    }
+    lastReadAt = data?.last_read_at || null;
+  }
+
+  async function saveReadState(iso) {
+    if (!currentUser || !iso) return;
+    // Move the boundary forward only; never move it backwards.
+    if (lastReadAt && new Date(iso) <= new Date(lastReadAt)) return;
+    lastReadAt = iso;
+    const { error } = await supabaseClient.from("message_read_state").upsert({
+      user_id: currentUser.id,
+      last_read_at: iso,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+    if (error) console.warn("Could not save read state:", error);
+  }
+
+  function markNewestAsReadWhenAtTop() {
+    const list = document.getElementById("messageList");
+    if (!latestRows.length || list.scrollTop > 40) return;
+    // The list is newest-first, so the first row is the newest message the user can see.
+    saveReadState(latestRows[0].created_at);
+  }
+
   function renderMessages(rows) {
     const list = document.getElementById("messageList");
-    if (!rows.length) {
+    latestRows = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (!latestRows.length) {
       list.innerHTML = `
         <div class="py-16 text-center">
           <img src="mascot.png" alt="" class="float mx-auto h-24 w-24 object-contain" />
           <p class="display mt-4 text-lg font-semibold text-violet-700">Nothing here yet</p>
           <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
         </div>`;
-      seenMessageIds = new Set();
       return;
     }
 
     let lastDay = null;
-    const html = rows.map((m) => {
+    let unreadDividerAdded = false;
+    const html = latestRows.map((m) => {
       const mine = m.user_id === currentUser.id;
       const tone = toneFor(m.user_name);
-      const isNew = !seenMessageIds.has(m.id);
-      const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
-      const parts = [];
-      if (m.image_url) {
-        parts.push(`<a href="${escapeHtml(m.image_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(m.image_url)}" alt="shared photo" class="mb-1 max-h-64 w-full rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" /></a>`);
-      }
-      if (m.audio_url) {
-        parts.push(`
-          <div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5">
-            <span class="text-lg">🎤</span>
-            <audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio>
-          </div>`);
-      }
-      if (m.content) {
-        parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
-      }
-
+      const isUnread = !mine && (!lastReadAt || new Date(m.created_at) > new Date(lastReadAt));
       let dateSep = "";
       const label = dayLabel(m.created_at);
       if (label !== lastDay) {
@@ -432,8 +463,29 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           </div>`;
       }
 
+      let unreadDivider = "";
+      if (isUnread && !unreadDividerAdded) {
+        unreadDividerAdded = true;
+        unreadDivider = `
+          <div class="my-3 flex items-center gap-3 px-2">
+            <div class="h-1 flex-1 rounded-full bg-pink-200"></div>
+            <span class="rounded-full bg-pink-100 px-3 py-1 text-[11px] font-black text-pink-600">New messages</span>
+            <div class="h-1 flex-1 rounded-full bg-pink-200"></div>
+          </div>`;
+      }
+
+      const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
+      const parts = [];
+      if (m.image_url) {
+        parts.push(`<a href="${escapeHtml(m.image_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(m.image_url)}" alt="shared photo" class="mb-1 max-h-64 w-full rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" /></a>`);
+      }
+      if (m.audio_url) {
+        parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
+      }
+      if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
+
       const bubble = `
-        <div class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${isNew ? "msg-in" : ""}">
+        <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} msg-in">
           ${mine ? "" : `<div class="mb-1 flex h-8 w-8 flex-none items-center justify-center rounded-full ${tone.avatar} display text-sm font-semibold text-white shadow">${escapeHtml(initialsFor(m.user_name))}</div>`}
           <div class="sticker-shadow max-w-[78%] rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">
             ${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}
@@ -441,41 +493,75 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
             <div class="mt-1 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}">${formatTime(m.created_at)}</div>
           </div>
         </div>`;
-
-      return dateSep + bubble;
+      return unreadDivider + dateSep + bubble;
     }).join("");
 
     list.innerHTML = html;
-    seenMessageIds = new Set(rows.map((m) => m.id));
-    list.scrollTop = list.scrollHeight;
+    // Newest message is at the top. Never force the scroll position after a realtime update.
+    // This prevents the page from jumping while the user is reading older messages.
+    markNewestAsReadWhenAtTop();
   }
 
   async function loadMessages() {
     const { data, error } = await supabaseClient
       .from("messages")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
     if (!error) renderMessages(data || []);
+    else console.error("Could not load messages:", error);
   }
 
+  function addRealtimeMessage(row) {
+    if (!row) return;
+    const list = document.getElementById("messageList");
+    const exists = latestRows.some((m) => m.id === row.id);
+    if (exists) return;
+    latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    renderMessages(latestRows);
+  }
+
+  function updateRealtimeMessage(row) {
+    latestRows = latestRows.map((m) => m.id === row.id ? row : m);
+    renderMessages(latestRows);
+  }
+
+  function deleteRealtimeMessage(oldRow) {
+    latestRows = latestRows.filter((m) => m.id !== oldRow.id);
+    renderMessages(latestRows);
+  }
+
+  function setupRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = supabaseClient
+      .channel("messages-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, ({ new: row }) => addRealtimeMessage(row))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, ({ new: row }) => updateRealtimeMessage(row))
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, ({ old: row }) => deleteRealtimeMessage(row))
+      .subscribe((status) => console.log("Messages realtime:", status));
+  }
+
+  document.getElementById("messageList").addEventListener("scroll", () => {
+    // User has reached the newest messages again.
+    markNewestAsReadWhenAtTop();
+  }, { passive: true });
+
   if (supabaseClient) {
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       currentUser = session?.user || null;
+      if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+      if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+
       if (currentUser) {
         authPage.classList.add("hidden");
         boardPage.classList.remove("hidden");
-        document.getElementById("helloName").textContent =
-          currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-        loadMessages();
-        supabaseClient
-          .channel("messages")
-          .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadMessages)
-          .subscribe();
+        document.getElementById("helloName").textContent = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
+        await loadReadState();
+        await loadMessages();
+        setupRealtime();
 
         const onlineBadge = document.getElementById("onlineBadge");
-        const presenceChannel = supabaseClient.channel("board-presence", {
-          config: { presence: { key: currentUser.id } },
-        });
+        presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: currentUser.id } } });
         presenceChannel
           .on("presence", { event: "sync" }, () => {
             const count = Object.keys(presenceChannel.presenceState()).length;
@@ -483,16 +569,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
             onlineBadge.classList.toggle("hidden", count < 1);
           })
           .subscribe(async (status) => {
-            if (status === "SUBSCRIBED") {
-              await presenceChannel.track({ name: currentUser.user_metadata?.full_name || currentUser.email });
-            }
+            if (status === "SUBSCRIBED") await presenceChannel.track({ name: currentUser.user_metadata?.full_name || currentUser.email });
           });
       } else {
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
+        latestRows = [];
+        lastReadAt = null;
       }
     });
   }
+
 </script>
 </body>
 </html>
