@@ -119,10 +119,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       : "The Supabase library failed to initialize. Please try refreshing the page.";
   }
 
-  let supabase = null;
+  let supabaseClient = null;
   if (configured) {
     try {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {
       console.error("Failed to create Supabase client:", e);
       const banner = document.getElementById("configBanner");
@@ -165,7 +165,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   document.getElementById("authForm").onsubmit = async (e) => {
     e.preventDefault();
-    if (!supabase) return showError("Please add your Supabase URL and key first.");
+    if (!supabaseClient) return showError("Please add your Supabase URL and key first.");
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const name = document.getElementById("displayName").value.trim();
@@ -173,14 +173,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     try {
       if (registerMode) {
         if (!name) throw new Error("Please enter your name");
-        const { error } = await supabase.auth.signUp({
+        const { error } = await supabaseClient.auth.signUp({
           email,
           password,
           options: { data: { full_name: name } },
         });
         if (error) throw error;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
     } catch (err) {
@@ -190,15 +190,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
   };
 
-  document.getElementById("logoutBtn").onclick = () => supabase && supabase.auth.signOut();
+  document.getElementById("logoutBtn").onclick = () => supabaseClient && supabaseClient.auth.signOut();
 
   document.getElementById("sendForm").onsubmit = async (e) => {
     e.preventDefault();
     const input = document.getElementById("messageInput");
     const content = input.value.trim();
-    if (!content || !currentUser || !supabase) return;
+    if (!content || !currentUser || !supabaseClient) return;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-    const { error } = await supabase.from("messages").insert({
+    const { error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
       content,
@@ -252,15 +252,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   async function loadMessages() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from("messages")
       .select("*")
       .order("created_at", { ascending: true });
     if (!error) renderMessages(data || []);
   }
 
-  if (supabase) {
-    supabase.auth.onAuthStateChange((_event, session) => {
+  if (supabaseClient) {
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
       currentUser = session?.user || null;
       if (currentUser) {
         authPage.classList.add("hidden");
@@ -268,7 +268,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         document.getElementById("helloName").textContent =
           currentUser.user_metadata?.full_name || currentUser.email || "Friend";
         loadMessages();
-        supabase
+        supabaseClient
           .channel("messages")
           .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadMessages)
           .subscribe();
