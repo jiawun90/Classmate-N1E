@@ -252,16 +252,46 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
   }
 
+  // ------------------------------------------------------------
+  // Realtime message state
+  // IMPORTANT: Realtime events are handled directly instead of
+  // calling loadMessages() for every INSERT. This avoids an extra
+  // SELECT request and makes new messages appear immediately.
+  // ------------------------------------------------------------
+  let messagesState = [];
+  let messagesChannel = null;
+  let presenceChannel = null;
+
   async function sendMessage(payload) {
-    if (!currentUser || !supabaseClient) return;
+    if (!currentUser || !supabaseClient) return null;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-    const { error } = await supabaseClient.from("messages").insert({
-      user_id: currentUser.id,
-      user_name: userName,
-      content: "",
-      ...payload,
-    });
-    if (error) alert(error.message);
+
+    const { data, error } = await supabaseClient
+      .from("messages")
+      .insert({
+        user_id: currentUser.id,
+        user_name: userName,
+        content: "",
+        ...payload,
+      })
+      .select("*")
+      .single();
+
+    if (error) {
+      alert(error.message);
+      return null;
+    }
+
+    // Draw our own newly-created message immediately.
+    // The Realtime INSERT event is ignored later because the id is
+    // already present in seenMessageIds.
+    if (data) {
+      messagesState = [...messagesState.filter((m) => m.id !== data.id), data]
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      renderMessages(messagesState);
+    }
+
+    return data;
   }
 
   document.getElementById("sendForm").onsubmit = async (e) => {
@@ -455,25 +485,82 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       .from("messages")
       .select("*")
       .order("created_at", { ascending: true });
-    if (!error) renderMessages(data || []);
+    if (!error) {
+      messagesState = data || [];
+      renderMessages(messagesState);
+    } else {
+      console.error("Failed to load messages:", error);
+    }
+  }
+
+  function startRealtime() {
+    if (!supabaseClient || !currentUser) return;
+
+    // Prevent duplicate channels after auth state changes.
+    if (messagesChannel) {
+      supabaseClient.removeChannel(messagesChannel);
+      messagesChannel = null;
+    }
+
+    messagesChannel = supabaseClient
+      .channel("messages-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        ({ new: message }) => {
+          // Our own sendMessage() already rendered this row.
+          if (seenMessageIds.has(message.id)) return;
+          messagesState = [...messagesState, message]
+            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          renderMessages(messagesState);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        ({ new: message }) => {
+          messagesState = messagesState.map((m) => m.id === message.id ? message : m);
+          renderMessages(messagesState);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "messages" },
+        ({ old: message }) => {
+          messagesState = messagesState.filter((m) => m.id !== message.id);
+          renderMessages(messagesState);
+        }
+      )
+      .subscribe((status) => {
+        console.log("Messages Realtime:", status);
+      });
   }
 
   if (supabaseClient) {
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
       currentUser = session?.user || null;
+
+      if (messagesChannel) {
+        supabaseClient.removeChannel(messagesChannel);
+        messagesChannel = null;
+      }
+      if (presenceChannel) {
+        supabaseClient.removeChannel(presenceChannel);
+        presenceChannel = null;
+      }
+
       if (currentUser) {
         authPage.classList.add("hidden");
         boardPage.classList.remove("hidden");
         document.getElementById("helloName").textContent =
           currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-        loadMessages();
-        supabaseClient
-          .channel("messages")
-          .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, loadMessages)
-          .subscribe();
+
+        // Initial history load happens only once when entering the board.
+        await loadMessages();
+        startRealtime();
 
         const onlineBadge = document.getElementById("onlineBadge");
-        const presenceChannel = supabaseClient.channel("board-presence", {
+        presenceChannel = supabaseClient.channel("board-presence", {
           config: { presence: { key: currentUser.id } },
         });
         presenceChannel
@@ -488,6 +575,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
             }
           });
       } else {
+        messagesState = [];
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
       }
