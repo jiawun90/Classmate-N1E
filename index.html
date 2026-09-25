@@ -749,13 +749,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     delete pendingDeletions[id];
     if (!pending) return;
     const m = pending.row;
-    const { error } = await supabaseClient.from("messages").delete().eq("id", id);
-    if (error) {
-      console.warn(error);
+    const { data, error } = await supabaseClient.from("messages").delete().eq("id", id).select();
+    // Supabase RLS can silently block a delete (0 rows affected, no error).
+    // Treat "no rows came back" the same as a failure so we don't lose the message.
+    const reallyDeleted = !error && Array.isArray(data) && data.length > 0;
+    if (!reallyDeleted) {
+      console.warn("Delete did not take effect", error);
       if (!latestRows.some((x) => String(x.id) === String(id))) {
         latestRows = [m, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         renderMessages(latestRows);
       }
+      showToast(error ? "Could not delete: " + error.message : "Delete was blocked by the database", null, null, 5000);
       return;
     }
     // Best-effort cleanup of any attached media file (ignored if it fails).
