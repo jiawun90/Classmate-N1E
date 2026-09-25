@@ -48,9 +48,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       background-image: repeating-linear-gradient(90deg, #c4b5fd 0 10px, transparent 10px 18px);
       height: 2px;
     }
-    .sticker-shadow { box-shadow: 0 6px 0 rgba(0,0,0,0.05), 0 10px 18px -6px var(--tone-shadow, rgba(109,40,217,.18)); position: relative; z-index: 0; }
-    .action-row { position: relative; z-index: 20; pointer-events: auto; }
-    .action-row button { min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    .sticker-shadow { box-shadow: 0 6px 0 rgba(0,0,0,0.05), 0 10px 18px -6px var(--tone-shadow, rgba(109,40,217,.18)); }
     @keyframes confetti-fall {
       0% { transform: translateY(0) rotate(0deg); opacity: 1; }
       100% { transform: translateY(-70px) rotate(var(--rot, 180deg)); opacity: 0; }
@@ -208,9 +206,6 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const trimmed = (name || "?").trim();
     return trimmed ? trimmed[0].toUpperCase() : "?";
   }
-  function sameId(a, b) {
-    return a != null && b != null && String(a) === String(b);
-  }
   const PRESET_EMOJIS = ["❤️", "👍", "😂", "🎉"];
   function avatarHtml(userId, name, sizeClass) {
     const p = profilesCache[userId];
@@ -327,32 +322,19 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!currentUser || !supabaseClient) return;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
     const replyId = replyingTo ? replyingTo.id : null;
-    const tempId = "temp-" + Date.now();
-    const optimistic = {
-      id: tempId,
-      user_id: currentUser.id,
-      user_name: userName,
-      content: payload.content || "",
-      image_url: payload.image_url || null,
-      audio_url: payload.audio_url || null,
-      reply_to: replyId,
-      created_at: new Date().toISOString(),
-    };
-    addRealtimeMessage(optimistic);
-    cancelReply();
     const { data, error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
-      content: payload.content || "",
+      content: "",
       reply_to: replyId,
       ...payload,
     }).select("*").single();
-    latestRows = latestRows.filter((m) => String(m.id) !== tempId);
     if (error) {
-      renderMessages(latestRows);
       alert(error.message);
       return;
     }
+    cancelReply();
+    // Realtime will also deliver this row; addRealtimeMessage de-duplicates by id.
     addRealtimeMessage(data);
     await saveReadState(data.created_at);
   }
@@ -479,6 +461,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let reactionsCache = [];
   let eventsCache = [];
   let replyingTo = null;
+  let seenMessageIds = new Set();
 
   function dayLabel(iso) {
     const date = new Date(iso);
@@ -660,12 +643,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   async function toggleReaction(messageId, emoji) {
     if (!currentUser || !supabaseClient) return;
-    const existing = reactionsCache.find((r) => sameId(r.message_id, messageId) && r.user_id === currentUser.id && r.emoji === emoji);
+    const existing = reactionsCache.find((r) => r.message_id === messageId && r.user_id === currentUser.id && r.emoji === emoji);
     if (existing) {
       reactionsCache = reactionsCache.filter((r) => r.id !== existing.id);
       renderMessages(latestRows);
       const { error } = await supabaseClient.from("message_reactions").delete().eq("id", existing.id);
-      if (error) { alert(error.message); loadReactions().then(() => renderMessages(latestRows)); }
+      if (error) { console.warn(error); loadReactions().then(() => renderMessages(latestRows)); }
     } else {
       const temp = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUser.id, emoji };
       reactionsCache.push(temp);
@@ -676,7 +659,6 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (error) {
         reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
         renderMessages(latestRows);
-        alert(error.message);
       } else if (data) {
         reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
         if (!reactionsCache.some((r) => r.id === data.id)) reactionsCache.push(data);
@@ -693,7 +675,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return "";
   }
   function startReply(id) {
-    const m = latestRows.find((x) => sameId(x.id, id));
+    const m = latestRows.find((x) => x.id === id);
     if (!m) return;
     const author = m.user_id === currentUser.id ? "yourself" : (m.user_name || "Friend");
     replyingTo = { id: m.id, author, preview: messagePreview(m) };
@@ -709,11 +691,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   // ---------- Delete own message ----------
   async function deleteMessage(id) {
-    const m = latestRows.find((x) => sameId(x.id, id));
+    const m = latestRows.find((x) => x.id === id);
     if (!m || m.user_id !== currentUser.id) return;
     if (!confirm("Delete this message?")) return;
-    deleteRealtimeMessage({ id: m.id });
-    const { error } = await supabaseClient.from("messages").delete().eq("id", m.id);
+    deleteRealtimeMessage({ id });
+    const { error } = await supabaseClient.from("messages").delete().eq("id", id);
     if (error) { alert(error.message); await loadMessages(); return; }
     // Best-effort cleanup of any attached media file (ignored if it fails).
     const mediaUrl = m.image_url || m.audio_url;
@@ -797,15 +779,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   document.getElementById("messageList").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
-    if (!btn || !document.getElementById("messageList").contains(btn)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const action = btn.getAttribute("data-action");
-    const id = btn.getAttribute("data-id");
-    const emoji = btn.getAttribute("data-emoji");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
     if (action === "reply") startReply(id);
     else if (action === "delete") deleteMessage(id);
-    else if (action === "react-toggle") toggleReaction(id, emoji);
+    else if (action === "react-toggle") toggleReaction(id, btn.dataset.emoji);
   });
 
   function renderMessages(rows) {
@@ -818,6 +797,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           <p class="display mt-4 text-lg font-semibold text-violet-700">Nothing here yet</p>
           <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
         </div>`;
+      seenMessageIds = new Set();
       return;
     }
 
@@ -827,6 +807,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const mine = m.user_id === currentUser.id;
       const tone = toneFor(m.user_name);
       const isUnread = !mine && (!lastReadAt || new Date(m.created_at) > new Date(lastReadAt));
+      const isNew = !seenMessageIds.has(m.id);
       let dateSep = "";
       const label = dayLabel(m.created_at);
       if (label !== lastDay) {
@@ -853,7 +834,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
       const parts = [];
       if (m.reply_to) {
-        const orig = latestRows.find((x) => sameId(x.id, m.reply_to));
+        const orig = latestRows.find((x) => x.id === m.reply_to);
         const origAuthor = orig ? (orig.user_id === currentUser.id ? "You" : (orig.user_name || "Friend")) : "a message";
         const origPreview = orig ? messagePreview(orig) : "";
         parts.push(`<div class="mb-1.5 rounded-xl border-l-4 border-violet-300 px-2 py-1 text-xs font-bold ${mine ? "bg-white/15 text-violet-100" : "bg-black/5 text-violet-500"}">↪ ${escapeHtml(origAuthor)}: ${escapeHtml(origPreview)}</div>`);
@@ -867,7 +848,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
 
       const reactionRow = PRESET_EMOJIS.map((emoji) => {
-        const matches = reactionsCache.filter((r) => sameId(r.message_id, m.id) && r.emoji === emoji);
+        const matches = reactionsCache.filter((r) => r.message_id === m.id && r.emoji === emoji);
         const mineReacted = matches.some((r) => r.user_id === currentUser.id);
         const countLabel = matches.length ? ` ${matches.length}` : "";
         const style = matches.length
@@ -877,14 +858,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }).join("");
 
       const actionRow = `
-        <div class="action-row mt-1 flex flex-wrap items-center gap-1 px-1">
+        <div class="mt-1 flex flex-wrap items-center gap-1.5 px-1">
           ${reactionRow}
-          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-sm font-bold text-violet-400 hover:bg-violet-50">↩</button>
-          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="rounded-full px-1.5 py-0.5 text-sm font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
+          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="min-h-[26px] min-w-[26px] rounded-full px-2 py-1 text-xs font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="ml-1 min-h-[26px] min-w-[26px] rounded-full border border-pink-100 px-2 py-1 text-xs font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
       const bubble = `
-        <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} msg-in">
+        <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${isNew ? "msg-in" : ""}">
           ${mine ? "" : avatarHtml(m.user_id, m.user_name, "mb-1 h-8 w-8")}
           <div class="flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}">
             <div class="sticker-shadow w-full rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">
@@ -899,6 +880,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }).join("");
 
     list.innerHTML = html;
+    seenMessageIds = new Set(latestRows.map((m) => m.id));
     // Newest message is at the top. Never force the scroll position after a realtime update.
     // This prevents the page from jumping while the user is reading older messages.
     markNewestAsReadWhenAtTop();
@@ -915,7 +897,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function addRealtimeMessage(row) {
     if (!row) return;
-    const exists = latestRows.some((m) => sameId(m.id, row.id));
+    const list = document.getElementById("messageList");
+    const exists = latestRows.some((m) => m.id === row.id);
     if (exists) return;
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
@@ -927,7 +910,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   function deleteRealtimeMessage(oldRow) {
-    latestRows = latestRows.filter((m) => !sameId(m.id, oldRow.id));
+    latestRows = latestRows.filter((m) => m.id !== oldRow.id);
     renderMessages(latestRows);
   }
 
@@ -992,6 +975,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         reactionsCache = [];
         eventsCache = [];
         replyingTo = null;
+        seenMessageIds = new Set();
       }
     });
   }
