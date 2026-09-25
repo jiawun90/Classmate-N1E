@@ -54,36 +54,20 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       100% { transform: translateY(-70px) rotate(var(--rot, 180deg)); opacity: 0; }
     }
     .confetti-bit { position: fixed; z-index: 60; pointer-events: none; border-radius: 2px; animation: confetti-fall .7s ease-out forwards; }
+    #messageList { scrollbar-width: thin; scrollbar-color: #c4b5fd transparent; }
+    #messageList::-webkit-scrollbar { width: 8px; }
+    #messageList::-webkit-scrollbar-track { background: transparent; }
+    #messageList::-webkit-scrollbar-thumb {
+      background-color: #c4b5fd;
+      border-radius: 999px;
+      border: 2px solid #fff6e8;
+      background-clip: padding-box;
+    }
+    #messageList::-webkit-scrollbar-thumb:hover { background-color: #a78bfa; }
     @media (prefers-reduced-motion: reduce) {
       .float, .msg-in, .confetti-bit { animation: none !important; }
     }
-  
-    #imagePreview{transform:scale(1);transform-origin:center center;transition:transform .12s ease;}
-    .theme-choice{border:3px solid transparent;border-radius:20px;padding:12px;text-align:left;font-weight:900;transition:.15s}.theme-choice:hover{transform:translateY(-2px)}.theme-choice.active{border-color:#4c1d95;box-shadow:0 5px 0 rgba(0,0,0,.08)}
-    body[data-theme="blue"]{background:#eef9ff} body[data-theme="blue"] .playful{background:#eef9ff}
-    body[data-theme="blue"] .bg-violet-600{background:#0284c7!important} body[data-theme="blue"] .text-violet-700{color:#075985!important} body[data-theme="blue"] .bg-violet-50{background:#e0f2fe!important} body[data-theme="blue"] .text-violet-400{color:#38bdf8!important}
-    body[data-theme="mint"] .bg-violet-600{background:#059669!important} body[data-theme="mint"] .text-violet-700{color:#047857!important} body[data-theme="mint"] .bg-violet-50{background:#ecfdf5!important} body[data-theme="mint"] .text-violet-400{color:#34d399!important}
-    body[data-theme="pink"] .bg-violet-600{background:#db2777!important} body[data-theme="pink"] .text-violet-700{color:#9d174d!important} body[data-theme="pink"] .bg-violet-50{background:#fdf2f8!important} body[data-theme="pink"] .text-violet-400{color:#f472b6!important}
-    body[data-theme="sun"] .bg-violet-600{background:#d97706!important} body[data-theme="sun"] .text-violet-700{color:#92400e!important} body[data-theme="sun"] .bg-violet-50{background:#fffbeb!important} body[data-theme="sun"] .text-violet-400{color:#f59e0b!important}
-    .mention-chip{display:inline-block;border-radius:999px;background:#fde68a;color:#92400e;padding:1px 6px;font-weight:900}.pin-btn{opacity:.75}.pin-btn:hover{opacity:1}.viewer-dot{display:inline-flex;align-items:center;gap:4px;margin-left:6px;color:#64748b;font-size:10px;font-weight:900}
-  
-    /* Stable personal themes */
-    body[data-theme="violet"]{--theme-bg:#fff6e8;--theme-soft:#f5f3ff;--theme-main:#7c3aed;--theme-text:#5b21b6;--theme-accent:#c4b5fd}
-    body[data-theme="blue"]{--theme-bg:#eef9ff;--theme-soft:#e0f2fe;--theme-main:#0284c7;--theme-text:#075985;--theme-accent:#7dd3fc}
-    body[data-theme="mint"]{--theme-bg:#effcf5;--theme-soft:#ecfdf5;--theme-main:#059669;--theme-text:#047857;--theme-accent:#86efac}
-    body[data-theme="pink"]{--theme-bg:#fff3f8;--theme-soft:#fdf2f8;--theme-main:#db2777;--theme-text:#9d174d;--theme-accent:#f9a8d4}
-    body[data-theme="sun"]{--theme-bg:#fffaf0;--theme-soft:#fffbeb;--theme-main:#d97706;--theme-text:#92400e;--theme-accent:#fcd34d}
-    body[data-theme] .playful{background:var(--theme-bg)!important}
-    body[data-theme] #boardPage header,body[data-theme] #sendForm,body[data-theme] #searchPanel{background:rgba(255,255,255,.96)!important}
-    body[data-theme] .theme-primary{background:var(--theme-main)!important}
-    #boardPage{height:100dvh;max-height:100dvh;overflow:hidden}
-    #messageList{min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
-    #sendForm{position:sticky;bottom:0;z-index:40;flex:none}
-    .message-actions{display:flex;align-items:center;gap:5px;margin-left:auto}
-    .delete-btn{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:999px;background:rgba(255,255,255,.75);font-size:13px;opacity:.85}
-    .delete-btn:hover{background:#fee2e2;transform:scale(1.05)}
-    @media(max-width:640px){#boardPage{padding-bottom:max(.75rem,env(safe-area-inset-bottom))}#sendForm{margin-bottom:max(.5rem,env(safe-area-inset-bottom))}}
-</style>
+  </style>
 </head>
 <body class="playful text-slate-800">
 
@@ -124,8 +108,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   </div>
 </div>
 
-<div id="boardPage" class="hidden mx-auto flex h-dvh max-h-dvh max-w-xl flex-col overflow-hidden p-3">
-  <header class="theme-panel flex items-center justify-between gap-3 rounded-[1.75rem] border-4 border-white bg-white px-3 py-2.5 shadow">
+<div id="boardPage" class="hidden mx-auto flex h-dvh max-w-xl flex-col overflow-hidden p-3">
+  <header class="flex flex-none items-center justify-between gap-3 rounded-[1.75rem] border-4 border-white bg-white px-3 py-2.5 shadow">
     <div class="flex min-w-0 items-center gap-3">
       <img src="mascot.png" alt="" class="h-12 w-12 object-contain" />
       <div class="min-w-0">
@@ -133,62 +117,65 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         <p class="truncate text-xs font-bold text-violet-400">Hi, <span id="helloName" class="text-violet-700"></span> <span id="onlineBadge" class="ml-1 hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-600"></span></p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <button id="notifyBtn" title="Notifications" class="relative rounded-full bg-amber-100 px-3 py-2 text-lg">🔔<span id="notifyBadge" class="hidden absolute -right-1 -top-1 min-w-5 rounded-full bg-pink-500 px-1 text-[10px] font-black text-white">0</span></button>
-      <button id="themeBtn" title="Choose theme" class="rounded-full bg-sky-100 px-3 py-2 text-lg">🎨</button>
+    <div class="flex flex-none items-center gap-2">
+      <button id="myAvatarBtn" type="button" title="Your profile" class="h-9 w-9 flex-none overflow-hidden rounded-full border-2 border-violet-200">
+        <img id="myAvatarImg" class="hidden h-full w-full object-cover" alt="" />
+        <span id="myAvatarInitials" class="display flex h-full w-full items-center justify-center bg-violet-400 text-xs font-semibold text-white"></span>
+      </button>
       <button id="logoutBtn" class="rounded-full bg-pink-100 px-3 py-2 text-sm font-black text-violet-700">Logout</button>
     </div>
   </header>
 
-  <div id="searchPanel" class="theme-panel mt-3 rounded-[1.5rem] border-4 border-white bg-white p-2 shadow">
-    <div class="flex items-center gap-2">
-      <span class="text-xl">🔍</span>
-      <input id="searchInput" maxlength="80" placeholder="Search messages or classmate..." class="min-h-11 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
-      <button id="clearSearchBtn" type="button" class="hidden rounded-xl bg-slate-100 px-3 py-2 text-sm font-black">Clear</button>
-    </div>
-    <p id="searchHint" class="mt-1 hidden px-2 text-xs font-bold text-violet-400"></p>
+  <div class="mt-2 flex flex-none items-center gap-2 overflow-x-auto px-1">
+    <div id="upcomingStrip" class="flex flex-1 items-center gap-2"></div>
+    <button id="addEventBtn" type="button" class="flex-none whitespace-nowrap rounded-full border border-violet-100 bg-white/70 px-2.5 py-1 text-[11px] font-black text-violet-500">+ Event</button>
   </div>
-
-  <section id="pinnedPanel" class="mt-3 hidden rounded-[1.5rem] border-4 border-amber-100 bg-amber-50 p-3 shadow">
-    <div class="mb-2 flex items-center justify-between"><h2 class="display font-semibold text-amber-700">📌 Pinned</h2><span class="text-xs font-black text-amber-500">Important notice</span></div>
-    <div id="pinnedList" class="space-y-2"></div>
-  </section>
 
   <main id="messageList" class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto px-1 py-2"></main>
 
-  <form id="sendForm" class="theme-panel mt-2 mb-2 flex items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
+  <div id="replyPreview" class="hidden mx-1 mb-1 flex flex-none items-center gap-2 rounded-2xl border-2 border-violet-100 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-600">
+    <span class="flex-1 truncate" id="replyPreviewText"></span>
+    <button type="button" id="cancelReplyBtn" class="flex-none text-violet-400">✕</button>
+  </div>
+
+  <form id="sendForm" class="mt-2 mb-2 flex flex-none items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
     <input type="file" id="photoInput" accept="image/*" class="hidden" />
+    <input type="file" id="avatarInput" accept="image/*" class="hidden" />
     <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
     <button type="button" id="micBtn" title="Record a voice message" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎤</button>
     <input id="messageInput" maxlength="500" placeholder="Share something fun..." class="min-h-12 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
-    <button class="theme-primary h-12 flex-none rounded-2xl bg-violet-600 px-5 font-black text-white">Send</button>
+    <button class="h-12 flex-none rounded-2xl bg-violet-600 px-5 font-black text-white">Send</button>
   </form>
-</div>
 
-<div id="themeModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-violet-950/30 p-4">
-  <div class="w-full max-w-sm rounded-[2rem] border-4 border-white bg-white p-5 shadow-2xl">
-    <div class="flex items-center justify-between"><h3 class="display text-xl font-semibold text-violet-700">🎨 Choose your theme</h3><button class="modalClose rounded-full bg-slate-100 px-3 py-1 text-lg">×</button></div>
-    <div class="mt-4 grid grid-cols-2 gap-3" id="themeChoices"></div>
-    <label class="mt-4 block text-sm font-black text-violet-700">🎂 My birthday <span class="text-xs text-violet-300">(optional)</span></label>
-    <input id="birthdayInput" type="date" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
-    <button id="saveBirthdayBtn" type="button" class="mt-2 w-full rounded-2xl bg-violet-100 py-2.5 font-black text-violet-700">Save birthday</button>
-    <p class="mt-4 text-xs font-bold text-violet-300">Your theme and birthday are saved to your own account.</p>
+  <div id="profileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-sm rounded-[2rem] border-4 border-white bg-white p-6 shadow-xl">
+      <h2 class="display text-center text-xl font-semibold text-violet-700">Your Profile</h2>
+      <div class="mt-4 flex flex-col items-center gap-2">
+        <div id="profileAvatarPreview" class="display flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-violet-100 bg-violet-400 text-2xl font-semibold text-white"></div>
+        <button type="button" id="changePhotoBtn" class="rounded-full bg-violet-50 px-3 py-1.5 text-xs font-black text-violet-600">Change photo</button>
+      </div>
+      <label class="mt-4 block text-sm font-black text-violet-700">Birthday (optional)</label>
+      <input type="date" id="birthdayInput" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
+      <div class="mt-5 flex gap-2">
+        <button type="button" id="profileCloseBtn" class="flex-1 rounded-2xl bg-violet-50 py-3 font-black text-violet-600">Close</button>
+        <button type="button" id="profileSaveBtn" class="flex-1 rounded-2xl bg-violet-600 py-3 font-black text-white">Save</button>
+      </div>
+    </div>
   </div>
-</div>
 
-<div id="notifyModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-violet-950/30 p-4">
-  <div class="w-full max-w-sm rounded-[2rem] border-4 border-white bg-white p-5 shadow-2xl">
-    <div class="flex items-center justify-between"><h3 class="display text-xl font-semibold text-violet-700">🔔 Mentions</h3><button class="modalClose rounded-full bg-slate-100 px-3 py-1 text-lg">×</button></div>
-    <div id="notificationList" class="mt-4 max-h-80 space-y-2 overflow-y-auto"></div>
+  <div id="eventModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="w-full max-w-sm rounded-[2rem] border-4 border-white bg-white p-6 shadow-xl">
+      <h2 class="display text-center text-xl font-semibold text-violet-700">Add a class event</h2>
+      <label class="mt-4 block text-sm font-black text-violet-700">What's happening?</label>
+      <input id="eventTitleInput" maxlength="60" placeholder="e.g. Spring outing" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
+      <label class="mt-3 block text-sm font-black text-violet-700">Date</label>
+      <input type="date" id="eventDateInput" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
+      <div class="mt-5 flex gap-2">
+        <button type="button" id="eventCloseBtn" class="flex-1 rounded-2xl bg-violet-50 py-3 font-black text-violet-600">Cancel</button>
+        <button type="button" id="eventSaveBtn" class="flex-1 rounded-2xl bg-violet-600 py-3 font-black text-white">Add</button>
+      </div>
+    </div>
   </div>
-</div>
-
-<div id="imageModal" class="fixed inset-0 z-[120] hidden items-center justify-center bg-black/85 p-3 touch-none">
-  <button id="imageClose" class="absolute right-4 top-4 z-10 rounded-full bg-white/90 px-4 py-2 text-2xl font-black text-violet-700">×</button>
-  <div id="imageViewport" class="flex h-[90dvh] w-full items-center justify-center overflow-hidden">
-    <img id="imagePreview" src="" alt="Preview" class="max-h-full max-w-full select-none object-contain" draggable="false" />
-  </div>
-  <div class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-violet-700">Pinch / wheel to zoom · Double tap to reset</div>
 </div>
 
 <script>
@@ -218,6 +205,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function initialsFor(name) {
     const trimmed = (name || "?").trim();
     return trimmed ? trimmed[0].toUpperCase() : "?";
+  }
+  const PRESET_EMOJIS = ["❤️", "👍", "😂", "🎉"];
+  function avatarHtml(userId, name, sizeClass) {
+    const p = profilesCache[userId];
+    if (p && p.avatar_url) {
+      return `<img src="${escapeHtml(p.avatar_url)}" alt="${escapeHtml(name || "Friend")}" class="${sizeClass} flex-none rounded-full border-2 border-white object-cover shadow" />`;
+    }
+    const tone = toneFor(name);
+    return `<div class="${sizeClass} display flex flex-none items-center justify-center rounded-full ${tone.avatar} text-sm font-semibold text-white shadow">${escapeHtml(initialsFor(name))}</div>`;
   }
 
   if (!configured) {
@@ -322,207 +318,25 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
   }
 
-
-  // ---------------- Extended class-board features ----------------
-  const THEMES = {
-    violet:{label:"Lavender",emoji:"💜",bg:"#ede9fe"}, blue:{label:"Sky Blue",emoji:"💙",bg:"#e0f2fe"}, mint:{label:"Mint",emoji:"💚",bg:"#dcfce7"}, pink:{label:"Pink",emoji:"💗",bg:"#fce7f3"}, sun:{label:"Sunny",emoji:"💛",bg:"#fef3c7"}
-  };
-  let currentTheme = "violet";
-  let profiles = [];
-  let isClassAdmin = false;
-  let readReceipts = new Map();
-  let notifications = [];
-  let notificationChannel = null;
-  let featureChannel = null;
-  let searchTerm = "";
-  let markingRead = false;
-
-  function applyTheme(theme){
-    currentTheme = THEMES[theme] ? theme : "violet";
-    document.body.dataset.theme = currentTheme;
-    try{ localStorage.setItem("classmate-theme", currentTheme); }catch(e){}
-    document.querySelectorAll(".theme-choice").forEach(b=>b.classList.toggle("active", b.dataset.theme===currentTheme));
-  }
-  async function loadProfileAndRole(){
-    if(!currentUser) return;
-    let localTheme="violet";
-    try{ localTheme=localStorage.getItem("classmate-theme") || "violet"; }catch(e){}
-    applyTheme(localTheme);
-    const {data:profile,error} = await supabaseClient.from("classmate_profiles").select("user_id,display_name,theme,birthday").eq("user_id",currentUser.id).maybeSingle();
-    if(!error && profile){
-      applyTheme(profile.theme || localTheme);
-      document.getElementById("birthdayInput").value = profile.birthday || "";
-      if(birthdayIsToday(profile.birthday)) birthdayCelebration();
-    }
-    const {data:admin} = await supabaseClient.from("class_admins").select("user_id,role").eq("user_id",currentUser.id).maybeSingle();
-    isClassAdmin = !!admin;
-  }
-  async function saveTheme(theme){
-    if(!currentUser) return;
-    applyTheme(theme);
-    const name = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-    const {error} = await supabaseClient.from("classmate_profiles").upsert({user_id:currentUser.id,display_name:name,theme,updated_at:new Date().toISOString()},{onConflict:"user_id"});
-    if(error) console.warn("Could not save theme to Supabase; local theme is still active:",error);
-  }
-  async function saveBirthday(value){
-    if(!currentUser)return;
-    const name=currentUser.user_metadata?.full_name || currentUser.email || "Friend";
-    const {error}=await supabaseClient.from("classmate_profiles").upsert({user_id:currentUser.id,display_name:name,theme:currentTheme,birthday:value||null,updated_at:new Date().toISOString()},{onConflict:"user_id"});
-    if(error) console.warn("Could not save birthday:",error);
-    else closeModalById("themeModal");
-  }
-  function birthdayIsToday(value){ if(!value)return false; const d=new Date(value+"T00:00:00"); const now=new Date(); return d.getMonth()===now.getMonth() && d.getDate()===now.getDate(); }
-  function birthdayCelebration(name){
-    const today=new Date().toISOString().slice(0,10);
-    const safeName=name||"our friend";
-    const key=`birthday-effect-${today}-${safeName}`;
-    if(localStorage.getItem(key))return;
-    localStorage.setItem(key,"1");
-    const banner=document.createElement("div"); banner.className="fixed left-1/2 top-4 z-[130] -translate-x-1/2 rounded-full bg-pink-100 px-5 py-3 text-sm font-black text-pink-700 shadow-2xl"; banner.textContent=`🎂 ${safeName}'s birthday! 🎈 Have a lovely day! 💗`; document.body.appendChild(banner);
-    for(let i=0;i<18;i++){const b=document.createElement("div");b.className="fixed z-[125] pointer-events-none text-2xl";b.textContent=["🎈","🎉","⭐","💗"][i%4];b.style.left=(10+Math.random()*80)+"vw";b.style.bottom="-30px";b.style.transition="transform 2.8s ease-out, opacity 2.8s";document.body.appendChild(b);requestAnimationFrame(()=>{b.style.transform=`translateY(-${window.innerHeight+80}px) rotate(${Math.random()*50-25}deg)`;b.style.opacity="0"});setTimeout(()=>b.remove(),3000)}
-    setTimeout(()=>banner.remove(),4500);
-  }
-  function openModalById(id){const el=document.getElementById(id);el.classList.remove("hidden");el.classList.add("flex");}
-  function closeModalById(id){const el=document.getElementById(id);el.classList.add("hidden");el.classList.remove("flex");}
-  const themeChoices = document.getElementById("themeChoices");
-  Object.entries(THEMES).forEach(([key,t])=>{
-    const b=document.createElement("button"); b.type="button"; b.dataset.theme=key; b.className="theme-choice"; b.style.background=t.bg; b.innerHTML=`<div class="text-2xl">${t.emoji}</div><div>${t.label}</div>`; b.onclick=()=>{saveTheme(key);closeModalById("themeModal")}; themeChoices.appendChild(b);
-  });
-  document.getElementById("themeBtn").onclick=()=>openModalById("themeModal");
-  document.getElementById("saveBirthdayBtn").onclick=()=>saveBirthday(document.getElementById("birthdayInput").value);
-  document.getElementById("notifyBtn").onclick=async()=>{await loadNotifications();openModalById("notifyModal")};
-  document.querySelectorAll(".modalClose").forEach(b=>b.onclick=()=>b.closest("[id$='Modal']")?.classList.add("hidden"));
-
-  function getMentionedProfiles(text){
-    if(!text) return [];
-    const found=[];
-    profiles.forEach(p=>{
-      const name=(p.display_name||"").trim();
-      if(name && name!== (currentUser?.user_metadata?.full_name||"") && new RegExp("(^|\\s)@"+name.replace(/[.*+?^${}()|[\\]\\]/g,"\\$&")+"(?=\\s|$)","i").test(text)) found.push(p);
-    });
-    return found;
-  }
-  async function loadProfiles(){
-    if(!currentUser) return;
-    const {data,error}=await supabaseClient.from("classmate_profiles").select("user_id,display_name,theme,birthday").order("display_name");
-    if(!error) { profiles=data||[]; const todayBirthday=profiles.find(p=>birthdayIsToday(p.birthday)); if(todayBirthday) birthdayCelebration(todayBirthday.display_name); }
-  }
-  async function createMentionNotifications(message, mentioned){
-    if(!mentioned.length) return;
-    const rows=mentioned.map(p=>({recipient_id:p.user_id,message_id:message.id,mentioner_id:currentUser.id,read_at:null}));
-    const {error}=await supabaseClient.from("mention_notifications").upsert(rows,{onConflict:"recipient_id,message_id"});
-    if(error) console.warn("Mention notifications failed:",error);
-  }
-  async function loadNotifications(){
-    if(!currentUser) return;
-    const {data,error}=await supabaseClient.from("mention_notifications").select("id,message_id,mentioner_id,read_at,created_at").eq("recipient_id",currentUser.id).order("created_at",{ascending:false}).limit(50);
-    if(error){console.warn(error);return}
-    notifications=data||[];
-    const names=new Map(profiles.map(p=>[p.user_id,p.display_name]));
-    const list=document.getElementById("notificationList");
-    list.innerHTML=notifications.length?notifications.map(n=>`<button type="button" class="w-full rounded-2xl ${n.read_at?"bg-slate-50":"bg-pink-50"} p-3 text-left" data-notify-id="${n.id}" data-message-id="${n.message_id}"><div class="text-sm font-black text-violet-700">${n.read_at?"":"🆕 "}@${escapeHtml(names.get(n.mentioner_id)||"Classmate")} mentioned you</div><div class="text-xs font-bold text-violet-400">${formatTime(n.created_at)}</div></button>`).join(""):`<div class="py-8 text-center text-sm font-bold text-violet-300">No mentions yet 💌</div>`;
-    list.querySelectorAll("[data-notify-id]").forEach(btn=>btn.onclick=async()=>{await supabaseClient.from("mention_notifications").update({read_at:new Date().toISOString()}).eq("id",btn.dataset.notifyId).eq("recipient_id",currentUser.id); closeModalById("notifyModal"); document.getElementById("searchInput").value=""; searchTerm=""; const m=latestRows.find(x=>String(x.id)===String(btn.dataset.messageId)); if(m){document.querySelector(`[data-message-id="${CSS.escape(String(m.id))}"]`)?.scrollIntoView({behavior:"smooth",block:"center"})} await loadNotifications();});
-    updateNotificationBadge();
-  }
-  function updateNotificationBadge(){
-    const count=notifications.filter(n=>!n.read_at).length; const b=document.getElementById("notifyBadge"); b.textContent=count>9?"9+":String(count); b.classList.toggle("hidden",count===0);
-  }
-  async function setupFeatureRealtime(){
-    if(!currentUser||!supabaseClient) return;
-    if(featureChannel) supabaseClient.removeChannel(featureChannel);
-    featureChannel=supabaseClient.channel("classmate-features")
-      .on("postgres_changes",{event:"*",schema:"public",table:"mention_notifications",filter:`recipient_id=eq.${currentUser.id}`},async()=>{await loadNotifications()})
-      .on("postgres_changes",{event:"*",schema:"public",table:"messages"},async({new:row})=>{if(row?.is_pinned!==undefined) await loadMessages()})
-      .subscribe();
-  }
-
-  // Image lightbox with wheel/pinch zoom and double-click/tap reset.
-  let zoomScale=1, pinchStart=0, pinchBase=1, lastTap=0;
-  function resetZoom(){zoomScale=1;document.getElementById("imagePreview").style.transform="scale(1)";}
-  function openImage(url){const img=document.getElementById("imagePreview");img.src=url;resetZoom();openModalById("imageModal");}
-  document.getElementById("imageClose").onclick=()=>closeModalById("imageModal");
-  document.getElementById("imageModal").addEventListener("click",e=>{if(e.target.id==="imageModal"||e.target.id==="imageViewport")closeModalById("imageModal")});
-  document.getElementById("imageViewport").addEventListener("wheel",e=>{e.preventDefault();zoomScale=Math.min(4,Math.max(1,zoomScale+(e.deltaY<0?.18:-.18)));document.getElementById("imagePreview").style.transform=`scale(${zoomScale})`},{passive:false});
-  document.getElementById("imagePreview").addEventListener("dblclick",resetZoom);
-  document.getElementById("imagePreview").addEventListener("touchstart",e=>{if(e.touches.length===2){pinchStart=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);pinchBase=zoomScale;}else if(e.touches.length===1){const now=Date.now();if(now-lastTap<300)resetZoom();lastTap=now;}},{passive:true});
-  document.getElementById("imagePreview").addEventListener("touchmove",e=>{if(e.touches.length!==2)return;const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);zoomScale=Math.min(4,Math.max(1,pinchBase*(d/pinchStart)));document.getElementById("imagePreview").style.transform=`scale(${zoomScale})`;e.preventDefault();},{passive:false});
-
-  // Search / filtering.
-  document.getElementById("searchInput").addEventListener("input",e=>{searchTerm=e.target.value.trim().toLowerCase();document.getElementById("clearSearchBtn").classList.toggle("hidden",!searchTerm);renderMessages(latestRows);});
-  document.getElementById("clearSearchBtn").onclick=()=>{document.getElementById("searchInput").value="";searchTerm="";document.getElementById("clearSearchBtn").classList.add("hidden");renderMessages(latestRows)};
-
-  async function loadReadReceipts(){
-    if(!currentUser||!latestRows.length) return;
-    const ids=latestRows.map(m=>m.id);
-    const {data,error}=await supabaseClient.from("message_read_receipts").select("message_id,user_id,read_at").in("message_id",ids);
-    if(error){console.warn("Read receipts unavailable:",error);return}
-    readReceipts=new Map();
-    (data||[]).forEach(r=>{if(!readReceipts.has(r.message_id))readReceipts.set(r.message_id,[]);readReceipts.get(r.message_id).push(r)});
-  }
-  async function markMessagesRead(rows){
-    if(markingRead||!currentUser||!rows?.length)return;
-    const ids=rows.filter(m=>m.user_id!==currentUser.id).map(m=>m.id);
-    if(!ids.length)return;
-    markingRead=true;
-    try {
-      const now=new Date().toISOString();
-      const payload=ids.map(id=>({message_id:id,user_id:currentUser.id,read_at:now}));
-      const {error}=await supabaseClient.from("message_read_receipts").upsert(payload,{onConflict:"message_id,user_id"});
-      if(error) console.warn("Could not save read receipts:",error);
-      await loadReadReceipts();
-      renderMessages(latestRows);
-    } finally { markingRead=false; }
-  }
-  function viewerLabel(messageId){
-    const viewers=(readReceipts.get(messageId)||[]).filter(r=>r.user_id!==currentUser?.id);
-    if(!viewers.length)return "";
-    const names=profiles.filter(p=>viewers.some(v=>v.user_id===p.user_id)).map(p=>p.display_name);
-    if(!names.length)return `👀 ${viewers.length}`;
-    const shown=names.slice(0,3).join(", "); return `👀 ${escapeHtml(shown)}${names.length>3?` +${names.length-3}`:""}`;
-  }
-
-  async function deleteMessage(id){
-    if(!currentUser || !id) return;
-    const target = latestRows.find(m=>String(m.id)===String(id));
-    if(!target || target.user_id !== currentUser.id) return;
-    if(!confirm("Delete this message?")) return;
-    const {error} = await supabaseClient.from("messages").delete().eq("id",id).eq("user_id",currentUser.id);
-    if(error) alert("Delete failed: "+error.message);
-  }
-
-  async function pinMessage(id,pin){
-    if(!isClassAdmin)return;
-    const update=pin?{is_pinned:true,pinned_at:new Date().toISOString(),pinned_by:currentUser.id}:{is_pinned:false,pinned_at:null,pinned_by:null};
-    const {error}=await supabaseClient.from("messages").update(update).eq("id",id);
-    if(error) alert("Pinning failed: "+error.message); else await loadMessages();
-  }
-  function renderPinned(){
-    const panel=document.getElementById("pinnedPanel"),list=document.getElementById("pinnedList");
-    const rows=latestRows.filter(m=>m.is_pinned);
-    panel.classList.toggle("hidden",rows.length===0);
-    list.innerHTML=rows.map(m=>`<div class="rounded-2xl bg-white p-3 shadow-sm"><div class="flex items-center justify-between gap-2"><strong class="text-sm text-violet-700">📌 ${escapeHtml(m.user_name||"Friend")}</strong>${isClassAdmin?`<button type="button" class="rounded-full bg-amber-100 px-2 py-1 text-xs font-black text-amber-700" data-unpin="${m.id}">Unpin</button>`:""}</div><div class="mt-1 whitespace-pre-wrap text-sm font-bold text-slate-700">${escapeHtml(m.content||"📷 Photo")}</div></div>`).join("");
-    list.querySelectorAll("[data-unpin]").forEach(b=>b.onclick=()=>pinMessage(b.dataset.unpin,false));
-  }
-
   async function sendMessage(payload) {
     if (!currentUser || !supabaseClient) return;
     const userName = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
+    const replyId = replyingTo ? replyingTo.id : null;
     const { data, error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
       content: "",
+      reply_to: replyId,
       ...payload,
     }).select("*").single();
     if (error) {
       alert(error.message);
       return;
     }
+    cancelReply();
     // Realtime will also deliver this row; addRealtimeMessage de-duplicates by id.
     addRealtimeMessage(data);
-    const mentioned = getMentionedProfiles(payload.content || "");
-    await createMentionNotifications(data, mentioned);
     await saveReadState(data.created_at);
-    await markMessagesRead([data]);
   }
 
   document.getElementById("sendForm").onsubmit = async (e) => {
@@ -639,7 +453,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let lastReadAt = null;
   let realtimeChannel = null;
   let presenceChannel = null;
+  let reactionsChannel = null;
+  let profilesChannel = null;
+  let eventsChannel = null;
   let latestRows = [];
+  let profilesCache = {};
+  let reactionsCache = [];
+  let eventsCache = [];
+  let replyingTo = null;
+  let seenMessageIds = new Set();
 
   function dayLabel(iso) {
     const date = new Date(iso);
@@ -682,58 +504,479 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function markNewestAsReadWhenAtTop() {
     const list = document.getElementById("messageList");
-    if (markingRead || !latestRows.length || list.scrollTop > 40) return;
-    const newest = latestRows[0];
-    saveReadState(newest.created_at);
-    markMessagesRead(latestRows);
+    if (!latestRows.length || list.scrollTop > 40) return;
+    // The list is newest-first, so the first row is the newest message the user can see.
+    saveReadState(latestRows[0].created_at);
   }
+
+  // ---------- Profiles (avatar photo + birthday) ----------
+  async function loadProfiles() {
+    const { data, error } = await supabaseClient.from("profiles").select("*");
+    if (error) {
+      console.warn("Profiles unavailable. Run the supplied SQL migration.", error);
+      return;
+    }
+    profilesCache = {};
+    (data || []).forEach((p) => { profilesCache[p.id] = p; });
+  }
+
+  async function ensureMyProfile() {
+    if (!currentUser) return;
+    if (!profilesCache[currentUser.id]) {
+      const row = {
+        id: currentUser.id,
+        full_name: currentUser.user_metadata?.full_name || currentUser.email || "Friend",
+        avatar_url: null,
+        birthday: null,
+      };
+      const { error } = await supabaseClient.from("profiles").upsert(row);
+      if (!error) profilesCache[currentUser.id] = row;
+      else console.warn("Could not create profile:", error);
+    }
+    updateMyAvatarUI();
+  }
+
+  function updateMyAvatarUI() {
+    if (!currentUser) return;
+    const p = profilesCache[currentUser.id];
+    const img = document.getElementById("myAvatarImg");
+    const initials = document.getElementById("myAvatarInitials");
+    if (p && p.avatar_url) {
+      img.src = p.avatar_url;
+      img.classList.remove("hidden");
+      initials.classList.add("hidden");
+    } else {
+      img.classList.add("hidden");
+      initials.classList.remove("hidden");
+      initials.textContent = initialsFor(currentUser.user_metadata?.full_name || currentUser.email);
+    }
+  }
+
+  function setupProfilesRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (profilesChannel) supabaseClient.removeChannel(profilesChannel);
+    profilesChannel = supabaseClient
+      .channel("profiles-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, ({ eventType, new: row, old }) => {
+        if (eventType === "DELETE") delete profilesCache[old.id];
+        else profilesCache[row.id] = row;
+        updateMyAvatarUI();
+        renderMessages(latestRows);
+        renderUpcoming();
+      })
+      .subscribe();
+  }
+
+  function openProfileModal() {
+    const p = profilesCache[currentUser.id] || {};
+    document.getElementById("birthdayInput").value = p.birthday || "";
+    const preview = document.getElementById("profileAvatarPreview");
+    if (p.avatar_url) {
+      preview.innerHTML = `<img src="${escapeHtml(p.avatar_url)}" class="h-full w-full object-cover" alt="" />`;
+    } else {
+      preview.textContent = initialsFor(currentUser.user_metadata?.full_name || currentUser.email);
+    }
+    document.getElementById("profileModal").classList.remove("hidden");
+  }
+  function closeProfileModal() {
+    document.getElementById("profileModal").classList.add("hidden");
+  }
+  document.getElementById("myAvatarBtn").onclick = openProfileModal;
+  document.getElementById("profileCloseBtn").onclick = closeProfileModal;
+
+  document.getElementById("changePhotoBtn").onclick = () => document.getElementById("avatarInput").click();
+  document.getElementById("avatarInput").onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file || !currentUser || !supabaseClient) return;
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${currentUser.id}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
+      contentType: file.type || undefined,
+    });
+    if (upErr) { alert("Upload failed: " + upErr.message); return; }
+    const { data: urlData } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+    const { error } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, avatar_url: urlData.publicUrl });
+    if (error) { alert(error.message); return; }
+    profilesCache[currentUser.id] = { ...(profilesCache[currentUser.id] || {}), id: currentUser.id, avatar_url: urlData.publicUrl };
+    updateMyAvatarUI();
+    openProfileModal();
+    renderMessages(latestRows);
+  };
+
+  document.getElementById("profileSaveBtn").onclick = async () => {
+    const val = document.getElementById("birthdayInput").value;
+    const { error } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, birthday: val || null });
+    if (error) { alert(error.message); return; }
+    profilesCache[currentUser.id] = { ...(profilesCache[currentUser.id] || {}), id: currentUser.id, birthday: val || null };
+    renderUpcoming();
+    closeProfileModal();
+  };
+
+  // ---------- Emoji reactions ----------
+  async function loadReactions() {
+    const { data, error } = await supabaseClient.from("message_reactions").select("*");
+    if (error) {
+      console.warn("Reactions unavailable. Run the supplied SQL migration.", error);
+      return;
+    }
+    reactionsCache = data || [];
+  }
+
+  function setupReactionsRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (reactionsChannel) supabaseClient.removeChannel(reactionsChannel);
+    reactionsChannel = supabaseClient
+      .channel("reactions-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reactions" }, ({ new: row }) => {
+        if (!reactionsCache.some((r) => r.id === row.id)) {
+          reactionsCache.push(row);
+          renderMessages(latestRows);
+        }
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "message_reactions" }, ({ old: row }) => {
+        reactionsCache = reactionsCache.filter((r) => r.id !== row.id);
+        renderMessages(latestRows);
+      })
+      .subscribe();
+  }
+
+  async function toggleReaction(messageId, emoji) {
+    if (!currentUser || !supabaseClient) return;
+    const existing = reactionsCache.find((r) => r.message_id === messageId && r.user_id === currentUser.id && r.emoji === emoji);
+    if (existing) {
+      reactionsCache = reactionsCache.filter((r) => r.id !== existing.id);
+      renderMessages(latestRows);
+      const { error } = await supabaseClient.from("message_reactions").delete().eq("id", existing.id);
+      if (error) { console.warn(error); loadReactions().then(() => renderMessages(latestRows)); }
+    } else {
+      const temp = { id: `temp-${Date.now()}`, message_id: messageId, user_id: currentUser.id, emoji };
+      reactionsCache.push(temp);
+      renderMessages(latestRows);
+      const { data, error } = await supabaseClient.from("message_reactions")
+        .insert({ message_id: messageId, user_id: currentUser.id, emoji })
+        .select().single();
+      if (error) {
+        reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
+        renderMessages(latestRows);
+      } else if (data) {
+        reactionsCache = reactionsCache.filter((r) => r.id !== temp.id);
+        if (!reactionsCache.some((r) => r.id === data.id)) reactionsCache.push(data);
+        renderMessages(latestRows);
+      }
+    }
+  }
+
+  // ---------- Reply ----------
+  function messagePreview(m) {
+    if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
+    if (m.image_url) return "📷 Photo";
+    if (m.audio_url) return "🎤 Voice message";
+    return "";
+  }
+  function startReply(id) {
+    const m = latestRows.find((x) => String(x.id) === String(id));
+    if (!m) {
+      console.warn("Reply failed: message not found", id, latestRows);
+      showToast("This message is no longer available.", null, null, 3000);
+      return;
+    }
+    const author = currentUser && String(m.user_id) === String(currentUser.id) ? "yourself" : (m.user_name || "Friend");
+    replyingTo = { id: m.id, author, preview: messagePreview(m) };
+    document.getElementById("replyPreviewText").textContent = `Replying to ${author}: ${replyingTo.preview}`;
+    document.getElementById("replyPreview").classList.remove("hidden");
+    document.getElementById("messageInput").focus();
+  }
+  function cancelReply() {
+    replyingTo = null;
+    document.getElementById("replyPreview").classList.add("hidden");
+  }
+  document.getElementById("cancelReplyBtn").onclick = cancelReply;
+
+  // ---------- Delete own message ----------
+  let pendingDeletions = {};
+
+  function showToast(message, actionLabel, onAction, duration = 5000) {
+    const existing = document.getElementById("appToast");
+    if (existing) existing.remove();
+    const toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-xl";
+    toast.innerHTML = `<span>${escapeHtml(message)}</span>` + (actionLabel ? `<button type="button" class="font-black text-pink-300">${escapeHtml(actionLabel)}</button>` : "");
+    document.body.appendChild(toast);
+    if (actionLabel && onAction) {
+      toast.querySelector("button").onclick = () => { onAction(); toast.remove(); };
+    }
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, duration);
+  }
+
+  function deleteMessage(id) {
+    const m = latestRows.find((x) => String(x.id) === String(id));
+    if (!m) {
+      console.warn("Delete failed: message not found", id, latestRows);
+      showToast("This message is no longer available.", null, null, 3000);
+      return;
+    }
+    if (!currentUser) {
+      showToast("Please sign in first.", null, null, 3000);
+      return;
+    }
+    if (String(m.user_id) !== String(currentUser.id)) {
+      showToast("You can only delete your own messages.", null, null, 3000);
+      return;
+    }
+    if (pendingDeletions[id]) return;
+    latestRows = latestRows.filter((x) => String(x.id) !== String(id));
+    renderMessages(latestRows);
+    const timer = setTimeout(() => finalizeDelete(id), 5000);
+    pendingDeletions[id] = { row: m, timer };
+    showToast("Message deleted", "Undo", () => undoDelete(id), 5000);
+  }
+
+  function undoDelete(id) {
+    const pending = pendingDeletions[id];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    delete pendingDeletions[id];
+    if (!latestRows.some((x) => String(x.id) === String(id))) {
+      latestRows = [pending.row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      renderMessages(latestRows);
+    }
+  }
+
+  async function finalizeDelete(id) {
+    const pending = pendingDeletions[id];
+    delete pendingDeletions[id];
+    if (!pending) return;
+    const m = pending.row;
+    const { data, error } = await supabaseClient.from("messages").delete().eq("id", id).select();
+    // Supabase RLS can silently block a delete (0 rows affected, no error).
+    // Treat "no rows came back" the same as a failure so we don't lose the message.
+    const reallyDeleted = !error && Array.isArray(data) && data.length > 0;
+    if (!reallyDeleted) {
+      console.warn("Delete did not take effect", error);
+      if (!latestRows.some((x) => String(x.id) === String(id))) {
+        latestRows = [m, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        renderMessages(latestRows);
+      }
+      showToast(error ? "Could not delete: " + error.message : "Delete was blocked by the database", null, null, 5000);
+      return;
+    }
+    // Best-effort cleanup of any attached media file (ignored if it fails).
+    const mediaUrl = m.image_url || m.audio_url;
+    if (mediaUrl) {
+      const marker = `/${MEDIA_BUCKET}/`;
+      const idx = mediaUrl.indexOf(marker);
+      if (idx !== -1) {
+        const path = decodeURIComponent(mediaUrl.slice(idx + marker.length));
+        supabaseClient.storage.from(MEDIA_BUCKET).remove([path]).catch(() => {});
+      }
+    }
+  }
+
+  // ---------- Class events + birthdays ("Upcoming" strip) ----------
+  async function loadEvents() {
+    const { data, error } = await supabaseClient.from("class_events").select("*").order("event_date", { ascending: true });
+    if (error) {
+      console.warn("Class events unavailable. Run the supplied SQL migration.", error);
+      return;
+    }
+    eventsCache = data || [];
+  }
+
+  function setupEventsRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (eventsChannel) supabaseClient.removeChannel(eventsChannel);
+    eventsChannel = supabaseClient
+      .channel("events-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "class_events" }, () => {
+        loadEvents().then(renderUpcoming);
+      })
+      .subscribe();
+  }
+
+  function nextOccurrence(month, day) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    let next = new Date(now.getFullYear(), month - 1, day);
+    if (next < now) next = new Date(now.getFullYear() + 1, month - 1, day);
+    return next;
+  }
+
+  function renderUpcoming() {
+    const strip = document.getElementById("upcomingStrip");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const items = [];
+    Object.values(profilesCache).forEach((p) => {
+      if (!p.birthday) return;
+      const [, m, d] = p.birthday.split("-").map(Number);
+      const next = nextOccurrence(m, d);
+      const days = Math.round((next - today) / 86400000);
+      if (days <= 30) items.push({ label: `🎂 ${p.full_name || "Someone"}'s birthday`, days });
+    });
+    eventsCache.forEach((ev) => {
+      const d = new Date(ev.event_date + "T00:00:00");
+      const days = Math.round((d - today) / 86400000);
+      if (days >= 0 && days <= 30) items.push({ label: `📅 ${ev.title}`, days });
+    });
+    items.sort((a, b) => a.days - b.days);
+    if (!items.length) { strip.innerHTML = ""; return; }
+    strip.innerHTML = items.slice(0, 3).map((it) => `
+      <span class="whitespace-nowrap rounded-full border border-violet-100 bg-white/80 px-2.5 py-1 text-[11px] font-black text-violet-600">${escapeHtml(it.label)} · ${it.days === 0 ? "today" : it.days === 1 ? "tomorrow" : "in " + it.days + "d"}</span>
+    `).join("");
+  }
+
+  document.getElementById("addEventBtn").onclick = () => document.getElementById("eventModal").classList.remove("hidden");
+  document.getElementById("eventCloseBtn").onclick = () => document.getElementById("eventModal").classList.add("hidden");
+  document.getElementById("eventSaveBtn").onclick = async () => {
+    const title = document.getElementById("eventTitleInput").value.trim();
+    const date = document.getElementById("eventDateInput").value;
+    if (!title || !date || !currentUser || !supabaseClient) return;
+    const { error } = await supabaseClient.from("class_events").insert({ title, event_date: date, created_by: currentUser.id });
+    if (error) { alert(error.message); return; }
+    document.getElementById("eventTitleInput").value = "";
+    document.getElementById("eventDateInput").value = "";
+    document.getElementById("eventModal").classList.add("hidden");
+    await loadEvents();
+    renderUpcoming();
+  };
+
+  // Global action handler: use document delegation so dynamic message buttons
+  // continue to work even after messageList.innerHTML is replaced.
+  document.addEventListener("click", (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
+    if (!btn) return;
+
+    const action = btn.getAttribute("data-action");
+    const id = btn.getAttribute("data-id");
+    console.log("Message action clicked:", action, id);
+
+    try {
+      if (action === "reply") {
+        e.preventDefault();
+        e.stopPropagation();
+        startReply(id);
+      } else if (action === "delete") {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteMessage(id);
+      } else if (action === "react-toggle") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleReaction(id, btn.getAttribute("data-emoji"));
+      }
+    } catch (err) {
+      console.error(`Action "${action}" failed:`, err);
+      showToast("Something went wrong: " + (err.message || err), null, null, 4000);
+    }
+  }, true);
 
   function renderMessages(rows) {
     const list = document.getElementById("messageList");
     latestRows = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const filteredRows = searchTerm ? latestRows.filter(m => `${m.user_name||""} ${m.content||""}`.toLowerCase().includes(searchTerm)) : latestRows;
-    document.getElementById("searchHint").classList.toggle("hidden", !searchTerm);
-    if(searchTerm) document.getElementById("searchHint").textContent = `${filteredRows.length} message${filteredRows.length===1?"":"s"} found`;
-    renderPinned();
-    if (!filteredRows.length) {
-      list.innerHTML = `<div class="py-16 text-center"><img src="mascot.png" alt="" class="float mx-auto h-24 w-24 object-contain" /><p class="display mt-4 text-lg font-semibold text-violet-700">${searchTerm?"No messages found":"Nothing here yet"}</p><p class="text-sm font-bold text-violet-400">${searchTerm?"Try another name or keyword.":"Be the first N1E classmate to share something fun."}</p></div>`;
+    if (!latestRows.length) {
+      list.innerHTML = `
+        <div class="py-16 text-center">
+          <img src="mascot.png" alt="" class="float mx-auto h-24 w-24 object-contain" />
+          <p class="display mt-4 text-lg font-semibold text-violet-700">Nothing here yet</p>
+          <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
+        </div>`;
+      seenMessageIds = new Set();
       return;
     }
-    let lastDay = null, unreadDividerAdded = false;
-    const html = filteredRows.map((m) => {
+
+    let lastDay = null;
+    let unreadDividerAdded = false;
+    const html = latestRows.map((m) => {
       const mine = m.user_id === currentUser.id;
       const tone = toneFor(m.user_name);
       const isUnread = !mine && (!lastReadAt || new Date(m.created_at) > new Date(lastReadAt));
+      const isNew = !seenMessageIds.has(m.id);
       let dateSep = "";
       const label = dayLabel(m.created_at);
-      if (label !== lastDay) { lastDay = label; dateSep = `<div class="my-2 flex items-center gap-3 px-2"><div class="torn-divider flex-1"></div><span class="display text-xs font-semibold text-violet-400">${label}</span><div class="torn-divider flex-1"></div></div>`; }
+      if (label !== lastDay) {
+        lastDay = label;
+        dateSep = `
+          <div class="my-2 flex items-center gap-3 px-2">
+            <div class="torn-divider flex-1"></div>
+            <span class="display text-xs font-semibold text-violet-400">${label}</span>
+            <div class="torn-divider flex-1"></div>
+          </div>`;
+      }
+
       let unreadDivider = "";
-      if (isUnread && !unreadDividerAdded) { unreadDividerAdded = true; unreadDivider = `<div class="my-3 flex items-center gap-3 px-2"><div class="h-1 flex-1 rounded-full bg-pink-200"></div><span class="rounded-full bg-pink-100 px-3 py-1 text-[11px] font-black text-pink-600">New messages</span><div class="h-1 flex-1 rounded-full bg-pink-200"></div></div>`; }
+      if (isUnread && !unreadDividerAdded) {
+        unreadDividerAdded = true;
+        unreadDivider = `
+          <div class="my-3 flex items-center gap-3 px-2">
+            <div class="h-1 flex-1 rounded-full bg-pink-200"></div>
+            <span class="rounded-full bg-pink-100 px-3 py-1 text-[11px] font-black text-pink-600">New messages</span>
+            <div class="h-1 flex-1 rounded-full bg-pink-200"></div>
+          </div>`;
+      }
+
       const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
       const parts = [];
-      if (m.image_url) parts.push(`<button type="button" class="image-open block w-full" data-image-url="${escapeHtml(m.image_url)}"><img src="${escapeHtml(m.image_url)}" alt="shared photo" class="mb-1 max-h-64 w-full rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" /></button>`);
-      if (m.audio_url) parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
-      if (m.content) {
-        const safe=escapeHtml(m.content).replace(/(^|\s)@([^\s@]+)/g,'$1<span class="mention-chip">@$2</span>');
-        parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${safe}</div>`);
+      if (m.reply_to) {
+        const orig = latestRows.find((x) => x.id === m.reply_to);
+        const origAuthor = orig ? (orig.user_id === currentUser.id ? "You" : (orig.user_name || "Friend")) : "a message";
+        const origPreview = orig ? messagePreview(orig) : "";
+        parts.push(`<div class="mb-1.5 rounded-xl border-l-4 border-violet-300 px-2 py-1 text-xs font-bold ${mine ? "bg-white/15 text-violet-100" : "bg-black/5 text-violet-500"}">↪ ${escapeHtml(origAuthor)}: ${escapeHtml(origPreview)}</div>`);
       }
-      const viewers=viewerLabel(m.id);
-      const adminPin=isClassAdmin?`<button type="button" class="pin-btn rounded-full bg-white/70 px-2 py-1 text-[10px] font-black text-violet-700" data-pin="${m.id}" data-pinned="${!!m.is_pinned}">${m.is_pinned?"📌 Unpin":"📌 Pin"}</button>`:"";
-      const bubble = `<div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} msg-in">${mine ? "" : `<div class="mb-1 flex h-8 w-8 w-8 flex-none items-center justify-center rounded-full ${tone.avatar} display text-sm font-semibold text-white shadow">${escapeHtml(initialsFor(m.user_name))}</div>`}<div class="sticker-shadow max-w-[78%] rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}${parts.join("")}<div class="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}"><span>${formatTime(m.created_at)}</span><span class="message-actions">${viewers?`<span class="viewer-dot">${viewers}</span>`:""}${mine?`<button type="button" class="delete-btn" title="Delete message" data-delete="${escapeHtml(m.id)}">🗑️</button>`:""}${adminPin}</span></div></div></div>`;
+      if (m.image_url) {
+        parts.push(`<a href="${escapeHtml(m.image_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(m.image_url)}" alt="shared photo" class="mb-1 max-h-64 w-full rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" /></a>`);
+      }
+      if (m.audio_url) {
+        parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
+      }
+      if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
+
+      const reactionRow = PRESET_EMOJIS.map((emoji) => {
+        const matches = reactionsCache.filter((r) => r.message_id === m.id && r.emoji === emoji);
+        const mineReacted = matches.some((r) => r.user_id === currentUser.id);
+        const countLabel = matches.length ? ` ${matches.length}` : "";
+        const style = matches.length
+          ? (mineReacted ? "border-violet-400 bg-violet-100 text-violet-700" : "border-transparent bg-white/70 text-slate-500")
+          : "border-transparent text-slate-400 opacity-60 hover:opacity-100";
+        return `<button type="button" data-action="react-toggle" data-id="${escapeHtml(m.id)}" data-emoji="${emoji}" class="min-h-[34px] rounded-full border px-2.5 py-1.5 text-base font-bold ${style}">${emoji}${countLabel}</button>`;
+      }).join("");
+
+      const actionRow = `
+        <div class="mt-1.5 flex flex-wrap items-center gap-2 px-1">
+          ${reactionRow}
+          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="relative z-20 min-h-[34px] min-w-[34px] cursor-pointer rounded-full px-2.5 py-1.5 text-base font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="relative z-20 ml-1 min-h-[34px] min-w-[34px] cursor-pointer rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
+        </div>`;
+
+      const bubble = `
+        <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${isNew ? "msg-in" : ""}">
+          ${mine ? "" : avatarHtml(m.user_id, m.user_name, "mb-1 h-8 w-8")}
+          <div class="flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}">
+            <div class="sticker-shadow w-full rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">
+              ${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}
+              ${parts.join("")}
+              <div class="mt-1 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}">${formatTime(m.created_at)}</div>
+            </div>
+            ${actionRow}
+          </div>
+        </div>`;
       return unreadDivider + dateSep + bubble;
     }).join("");
+
     list.innerHTML = html;
-    list.querySelectorAll(".image-open").forEach(b=>b.onclick=()=>openImage(b.dataset.imageUrl));
-    list.querySelectorAll("[data-pin]").forEach(b=>b.onclick=()=>pinMessage(b.dataset.pin,b.dataset.pinned!=="true"));
-    list.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteMessage(b.dataset.delete));
+    seenMessageIds = new Set(latestRows.map((m) => m.id));
+    // Newest message is at the top. Never force the scroll position after a realtime update.
+    // This prevents the page from jumping while the user is reading older messages.
     markNewestAsReadWhenAtTop();
   }
+
   async function loadMessages() {
     const { data, error } = await supabaseClient
       .from("messages")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error) { renderMessages(data || []); await loadReadReceipts(); renderMessages(latestRows); }
+    if (!error) renderMessages(data || []);
     else console.error("Could not load messages:", error);
   }
 
@@ -744,7 +987,6 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (exists) return;
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
-    loadReadReceipts().then(()=>renderMessages(latestRows));
   }
 
   function updateRealtimeMessage(row) {
@@ -773,27 +1015,43 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     markNewestAsReadWhenAtTop();
   }, { passive: true });
 
+  let boardReadyForUserId = null;
+
   if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-      currentUser = session?.user || null;
-      if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
-      if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+      const nextUser = session?.user || null;
+      currentUser = nextUser;
 
-      if (currentUser) {
+      if (nextUser) {
         authPage.classList.add("hidden");
         boardPage.classList.remove("hidden");
-        document.getElementById("helloName").textContent = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
+        document.getElementById("helloName").textContent = nextUser.user_metadata?.full_name || nextUser.email || "Friend";
+
+        // Supabase can fire this event more than once for the same session
+        // (e.g. on token refresh). Only rebuild channels on a genuine sign-in.
+        if (boardReadyForUserId === nextUser.id) return;
+        boardReadyForUserId = nextUser.id;
+
+        if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+        if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+        if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
+        if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
+        if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
+
         await loadReadState();
         await loadProfiles();
-        try{ applyTheme(localStorage.getItem("classmate-theme") || "violet"); }catch(e){ applyTheme("violet"); }
-        await loadProfileAndRole();
+        await ensureMyProfile();
+        await loadReactions();
+        await loadEvents();
         await loadMessages();
-        await loadNotifications();
         setupRealtime();
-        setupFeatureRealtime();
+        setupReactionsRealtime();
+        setupProfilesRealtime();
+        setupEventsRealtime();
+        renderUpcoming();
 
         const onlineBadge = document.getElementById("onlineBadge");
-        presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: currentUser.id } } });
+        presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: nextUser.id } } });
         presenceChannel
           .on("presence", { event: "sync" }, () => {
             const count = Object.keys(presenceChannel.presenceState()).length;
@@ -801,13 +1059,24 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
             onlineBadge.classList.toggle("hidden", count < 1);
           })
           .subscribe(async (status) => {
-            if (status === "SUBSCRIBED") await presenceChannel.track({ name: currentUser.user_metadata?.full_name || currentUser.email });
+            if (status === "SUBSCRIBED") await presenceChannel.track({ name: nextUser.user_metadata?.full_name || nextUser.email });
           });
       } else {
+        boardReadyForUserId = null;
+        if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+        if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+        if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
+        if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
+        if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
         latestRows = [];
         lastReadAt = null;
+        profilesCache = {};
+        reactionsCache = [];
+        eventsCache = [];
+        replyingTo = null;
+        seenMessageIds = new Set();
       }
     });
   }
