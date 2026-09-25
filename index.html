@@ -675,9 +675,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return "";
   }
   function startReply(id) {
-    const m = latestRows.find((x) => x.id === id);
-    if (!m) return;
-    const author = m.user_id === currentUser.id ? "yourself" : (m.user_name || "Friend");
+    const m = latestRows.find((x) => String(x.id) === String(id));
+    if (!m) {
+      console.warn("Reply failed: message not found", id, latestRows);
+      showToast("This message is no longer available.", null, null, 3000);
+      return;
+    }
+    const author = currentUser && String(m.user_id) === String(currentUser.id) ? "yourself" : (m.user_name || "Friend");
     replyingTo = { id: m.id, author, preview: messagePreview(m) };
     document.getElementById("replyPreviewText").textContent = `Replying to ${author}: ${replyingTo.preview}`;
     document.getElementById("replyPreview").classList.remove("hidden");
@@ -707,9 +711,22 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   function deleteMessage(id) {
-    const m = latestRows.find((x) => x.id === id);
-    if (!m || m.user_id !== currentUser.id || pendingDeletions[id]) return;
-    latestRows = latestRows.filter((x) => x.id !== id);
+    const m = latestRows.find((x) => String(x.id) === String(id));
+    if (!m) {
+      console.warn("Delete failed: message not found", id, latestRows);
+      showToast("This message is no longer available.", null, null, 3000);
+      return;
+    }
+    if (!currentUser) {
+      showToast("Please sign in first.", null, null, 3000);
+      return;
+    }
+    if (String(m.user_id) !== String(currentUser.id)) {
+      showToast("You can only delete your own messages.", null, null, 3000);
+      return;
+    }
+    if (pendingDeletions[id]) return;
+    latestRows = latestRows.filter((x) => String(x.id) !== String(id));
     renderMessages(latestRows);
     const timer = setTimeout(() => finalizeDelete(id), 5000);
     pendingDeletions[id] = { row: m, timer };
@@ -721,7 +738,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!pending) return;
     clearTimeout(pending.timer);
     delete pendingDeletions[id];
-    if (!latestRows.some((x) => x.id === id)) {
+    if (!latestRows.some((x) => String(x.id) === String(id))) {
       latestRows = [pending.row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       renderMessages(latestRows);
     }
@@ -735,7 +752,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const { error } = await supabaseClient.from("messages").delete().eq("id", id);
     if (error) {
       console.warn(error);
-      if (!latestRows.some((x) => x.id === id)) {
+      if (!latestRows.some((x) => String(x.id) === String(id))) {
         latestRows = [m, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         renderMessages(latestRows);
       }
@@ -821,20 +838,35 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     renderUpcoming();
   };
 
-  document.getElementById("messageList").addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-action]");
+  // Global action handler: use document delegation so dynamic message buttons
+  // continue to work even after messageList.innerHTML is replaced.
+  document.addEventListener("click", (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
     if (!btn) return;
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
+
+    const action = btn.getAttribute("data-action");
+    const id = btn.getAttribute("data-id");
+    console.log("Message action clicked:", action, id);
+
     try {
-      if (action === "reply") startReply(id);
-      else if (action === "delete") deleteMessage(id);
-      else if (action === "react-toggle") toggleReaction(id, btn.dataset.emoji);
+      if (action === "reply") {
+        e.preventDefault();
+        e.stopPropagation();
+        startReply(id);
+      } else if (action === "delete") {
+        e.preventDefault();
+        e.stopPropagation();
+        deleteMessage(id);
+      } else if (action === "react-toggle") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleReaction(id, btn.getAttribute("data-emoji"));
+      }
     } catch (err) {
       console.error(`Action "${action}" failed:`, err);
       showToast("Something went wrong: " + (err.message || err), null, null, 4000);
     }
-  });
+  }, true);
 
   function renderMessages(rows) {
     const list = document.getElementById("messageList");
@@ -909,8 +941,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const actionRow = `
         <div class="mt-1.5 flex flex-wrap items-center gap-2 px-1">
           ${reactionRow}
-          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="min-h-[34px] min-w-[34px] rounded-full px-2.5 py-1.5 text-base font-bold text-violet-400 hover:bg-violet-50">↩</button>
-          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="ml-1 min-h-[34px] min-w-[34px] rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
+          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="relative z-20 min-h-[34px] min-w-[34px] cursor-pointer rounded-full px-2.5 py-1.5 text-base font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="relative z-20 ml-1 min-h-[34px] min-w-[34px] cursor-pointer rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
       const bubble = `
