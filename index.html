@@ -66,7 +66,24 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     body[data-theme="pink"] .bg-violet-600{background:#db2777!important} body[data-theme="pink"] .text-violet-700{color:#9d174d!important} body[data-theme="pink"] .bg-violet-50{background:#fdf2f8!important} body[data-theme="pink"] .text-violet-400{color:#f472b6!important}
     body[data-theme="sun"] .bg-violet-600{background:#d97706!important} body[data-theme="sun"] .text-violet-700{color:#92400e!important} body[data-theme="sun"] .bg-violet-50{background:#fffbeb!important} body[data-theme="sun"] .text-violet-400{color:#f59e0b!important}
     .mention-chip{display:inline-block;border-radius:999px;background:#fde68a;color:#92400e;padding:1px 6px;font-weight:900}.pin-btn{opacity:.75}.pin-btn:hover{opacity:1}.viewer-dot{display:inline-flex;align-items:center;gap:4px;margin-left:6px;color:#64748b;font-size:10px;font-weight:900}
-  </style>
+  
+    /* Stable personal themes */
+    body[data-theme="violet"]{--theme-bg:#fff6e8;--theme-soft:#f5f3ff;--theme-main:#7c3aed;--theme-text:#5b21b6;--theme-accent:#c4b5fd}
+    body[data-theme="blue"]{--theme-bg:#eef9ff;--theme-soft:#e0f2fe;--theme-main:#0284c7;--theme-text:#075985;--theme-accent:#7dd3fc}
+    body[data-theme="mint"]{--theme-bg:#effcf5;--theme-soft:#ecfdf5;--theme-main:#059669;--theme-text:#047857;--theme-accent:#86efac}
+    body[data-theme="pink"]{--theme-bg:#fff3f8;--theme-soft:#fdf2f8;--theme-main:#db2777;--theme-text:#9d174d;--theme-accent:#f9a8d4}
+    body[data-theme="sun"]{--theme-bg:#fffaf0;--theme-soft:#fffbeb;--theme-main:#d97706;--theme-text:#92400e;--theme-accent:#fcd34d}
+    body[data-theme] .playful{background:var(--theme-bg)!important}
+    body[data-theme] #boardPage header,body[data-theme] #sendForm,body[data-theme] #searchPanel{background:rgba(255,255,255,.96)!important}
+    body[data-theme] .theme-primary{background:var(--theme-main)!important}
+    #boardPage{height:100dvh;max-height:100dvh;overflow:hidden}
+    #messageList{min-height:0;overscroll-behavior:contain;scrollbar-gutter:stable}
+    #sendForm{position:sticky;bottom:0;z-index:40;flex:none}
+    .message-actions{display:flex;align-items:center;gap:5px;margin-left:auto}
+    .delete-btn{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;border-radius:999px;background:rgba(255,255,255,.75);font-size:13px;opacity:.85}
+    .delete-btn:hover{background:#fee2e2;transform:scale(1.05)}
+    @media(max-width:640px){#boardPage{padding-bottom:max(.75rem,env(safe-area-inset-bottom))}#sendForm{margin-bottom:max(.5rem,env(safe-area-inset-bottom))}}
+</style>
 </head>
 <body class="playful text-slate-800">
 
@@ -107,8 +124,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   </div>
 </div>
 
-<div id="boardPage" class="hidden mx-auto flex min-h-dvh max-w-xl flex-col p-3">
-  <header class="flex items-center justify-between gap-3 rounded-[1.75rem] border-4 border-white bg-white px-3 py-2.5 shadow">
+<div id="boardPage" class="hidden mx-auto flex h-dvh max-h-dvh max-w-xl flex-col overflow-hidden p-3">
+  <header class="theme-panel flex items-center justify-between gap-3 rounded-[1.75rem] border-4 border-white bg-white px-3 py-2.5 shadow">
     <div class="flex min-w-0 items-center gap-3">
       <img src="mascot.png" alt="" class="h-12 w-12 object-contain" />
       <div class="min-w-0">
@@ -123,7 +140,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     </div>
   </header>
 
-  <div class="mt-3 rounded-[1.5rem] border-4 border-white bg-white p-2 shadow">
+  <div id="searchPanel" class="theme-panel mt-3 rounded-[1.5rem] border-4 border-white bg-white p-2 shadow">
     <div class="flex items-center gap-2">
       <span class="text-xl">🔍</span>
       <input id="searchInput" maxlength="80" placeholder="Search messages or classmate..." class="min-h-11 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
@@ -137,14 +154,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     <div id="pinnedList" class="space-y-2"></div>
   </section>
 
-  <main id="messageList" class="mt-3 flex-1 space-y-3 overflow-y-auto px-1 py-2"></main>
+  <main id="messageList" class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto px-1 py-2"></main>
 
-  <form id="sendForm" class="mt-2 mb-2 flex items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
+  <form id="sendForm" class="theme-panel mt-2 mb-2 flex items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
     <input type="file" id="photoInput" accept="image/*" class="hidden" />
     <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
     <button type="button" id="micBtn" title="Record a voice message" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎤</button>
     <input id="messageInput" maxlength="500" placeholder="Share something fun..." class="min-h-12 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
-    <button class="h-12 flex-none rounded-2xl bg-violet-600 px-5 font-black text-white">Send</button>
+    <button class="theme-primary h-12 flex-none rounded-2xl bg-violet-600 px-5 font-black text-white">Send</button>
   </form>
 </div>
 
@@ -323,17 +340,19 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function applyTheme(theme){
     currentTheme = THEMES[theme] ? theme : "violet";
     document.body.dataset.theme = currentTheme;
+    try{ localStorage.setItem("classmate-theme", currentTheme); }catch(e){}
     document.querySelectorAll(".theme-choice").forEach(b=>b.classList.toggle("active", b.dataset.theme===currentTheme));
   }
   async function loadProfileAndRole(){
     if(!currentUser) return;
+    let localTheme="violet";
+    try{ localTheme=localStorage.getItem("classmate-theme") || "violet"; }catch(e){}
+    applyTheme(localTheme);
     const {data:profile,error} = await supabaseClient.from("classmate_profiles").select("user_id,display_name,theme,birthday").eq("user_id",currentUser.id).maybeSingle();
     if(!error && profile){
-      applyTheme(profile.theme || "violet");
+      applyTheme(profile.theme || localTheme);
       document.getElementById("birthdayInput").value = profile.birthday || "";
       if(birthdayIsToday(profile.birthday)) birthdayCelebration();
-    } else {
-      applyTheme("violet");
     }
     const {data:admin} = await supabaseClient.from("class_admins").select("user_id,role").eq("user_id",currentUser.id).maybeSingle();
     isClassAdmin = !!admin;
@@ -343,7 +362,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     applyTheme(theme);
     const name = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
     const {error} = await supabaseClient.from("classmate_profiles").upsert({user_id:currentUser.id,display_name:name,theme,updated_at:new Date().toISOString()},{onConflict:"user_id"});
-    if(error) console.warn("Could not save theme:",error);
+    if(error) console.warn("Could not save theme to Supabase; local theme is still active:",error);
   }
   async function saveBirthday(value){
     if(!currentUser)return;
@@ -460,6 +479,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const names=profiles.filter(p=>viewers.some(v=>v.user_id===p.user_id)).map(p=>p.display_name);
     if(!names.length)return `👀 ${viewers.length}`;
     const shown=names.slice(0,3).join(", "); return `👀 ${escapeHtml(shown)}${names.length>3?` +${names.length-3}`:""}`;
+  }
+
+  async function deleteMessage(id){
+    if(!currentUser || !id) return;
+    const target = latestRows.find(m=>String(m.id)===String(id));
+    if(!target || target.user_id !== currentUser.id) return;
+    if(!confirm("Delete this message?")) return;
+    const {error} = await supabaseClient.from("messages").delete().eq("id",id).eq("user_id",currentUser.id);
+    if(error) alert("Delete failed: "+error.message);
   }
 
   async function pinMessage(id,pin){
@@ -691,12 +719,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }
       const viewers=viewerLabel(m.id);
       const adminPin=isClassAdmin?`<button type="button" class="pin-btn rounded-full bg-white/70 px-2 py-1 text-[10px] font-black text-violet-700" data-pin="${m.id}" data-pinned="${!!m.is_pinned}">${m.is_pinned?"📌 Unpin":"📌 Pin"}</button>`:"";
-      const bubble = `<div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} msg-in">${mine ? "" : `<div class="mb-1 flex h-8 w-8 w-8 flex-none items-center justify-center rounded-full ${tone.avatar} display text-sm font-semibold text-white shadow">${escapeHtml(initialsFor(m.user_name))}</div>`}<div class="sticker-shadow max-w-[78%] rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}${parts.join("")}<div class="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}"><span>${formatTime(m.created_at)}</span><span class="flex items-center gap-1">${viewers?`<span class="viewer-dot">${viewers}</span>`:""}${adminPin}</span></div></div></div>`;
+      const bubble = `<div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} msg-in">${mine ? "" : `<div class="mb-1 flex h-8 w-8 w-8 flex-none items-center justify-center rounded-full ${tone.avatar} display text-sm font-semibold text-white shadow">${escapeHtml(initialsFor(m.user_name))}</div>`}<div class="sticker-shadow max-w-[78%] rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}${parts.join("")}<div class="mt-1 flex items-center justify-between gap-2 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}"><span>${formatTime(m.created_at)}</span><span class="message-actions">${viewers?`<span class="viewer-dot">${viewers}</span>`:""}${mine?`<button type="button" class="delete-btn" title="Delete message" data-delete="${escapeHtml(m.id)}">🗑️</button>`:""}${adminPin}</span></div></div></div>`;
       return unreadDivider + dateSep + bubble;
     }).join("");
     list.innerHTML = html;
     list.querySelectorAll(".image-open").forEach(b=>b.onclick=()=>openImage(b.dataset.imageUrl));
     list.querySelectorAll("[data-pin]").forEach(b=>b.onclick=()=>pinMessage(b.dataset.pin,b.dataset.pinned!=="true"));
+    list.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteMessage(b.dataset.delete));
     markNewestAsReadWhenAtTop();
   }
   async function loadMessages() {
@@ -756,6 +785,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         document.getElementById("helloName").textContent = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
         await loadReadState();
         await loadProfiles();
+        try{ applyTheme(localStorage.getItem("classmate-theme") || "violet"); }catch(e){ applyTheme("violet"); }
         await loadProfileAndRole();
         await loadMessages();
         await loadNotifications();
