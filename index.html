@@ -826,9 +826,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!btn) return;
     const action = btn.dataset.action;
     const id = btn.dataset.id;
-    if (action === "reply") startReply(id);
-    else if (action === "delete") deleteMessage(id);
-    else if (action === "react-toggle") toggleReaction(id, btn.dataset.emoji);
+    try {
+      if (action === "reply") startReply(id);
+      else if (action === "delete") deleteMessage(id);
+      else if (action === "react-toggle") toggleReaction(id, btn.dataset.emoji);
+    } catch (err) {
+      console.error(`Action "${action}" failed:`, err);
+      showToast("Something went wrong: " + (err.message || err), null, null, 4000);
+    }
   });
 
   function renderMessages(rows) {
@@ -974,19 +979,29 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     markNewestAsReadWhenAtTop();
   }, { passive: true });
 
+  let boardReadyForUserId = null;
+
   if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-      currentUser = session?.user || null;
-      if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
-      if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
-      if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
-      if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
-      if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
+      const nextUser = session?.user || null;
+      currentUser = nextUser;
 
-      if (currentUser) {
+      if (nextUser) {
         authPage.classList.add("hidden");
         boardPage.classList.remove("hidden");
-        document.getElementById("helloName").textContent = currentUser.user_metadata?.full_name || currentUser.email || "Friend";
+        document.getElementById("helloName").textContent = nextUser.user_metadata?.full_name || nextUser.email || "Friend";
+
+        // Supabase can fire this event more than once for the same session
+        // (e.g. on token refresh). Only rebuild channels on a genuine sign-in.
+        if (boardReadyForUserId === nextUser.id) return;
+        boardReadyForUserId = nextUser.id;
+
+        if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+        if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+        if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
+        if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
+        if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
+
         await loadReadState();
         await loadProfiles();
         await ensureMyProfile();
@@ -1000,7 +1015,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         renderUpcoming();
 
         const onlineBadge = document.getElementById("onlineBadge");
-        presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: currentUser.id } } });
+        presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: nextUser.id } } });
         presenceChannel
           .on("presence", { event: "sync" }, () => {
             const count = Object.keys(presenceChannel.presenceState()).length;
@@ -1008,9 +1023,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
             onlineBadge.classList.toggle("hidden", count < 1);
           })
           .subscribe(async (status) => {
-            if (status === "SUBSCRIBED") await presenceChannel.track({ name: currentUser.user_metadata?.full_name || currentUser.email });
+            if (status === "SUBSCRIBED") await presenceChannel.track({ name: nextUser.user_metadata?.full_name || nextUser.email });
           });
       } else {
+        boardReadyForUserId = null;
+        if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+        if (presenceChannel) { supabaseClient.removeChannel(presenceChannel); presenceChannel = null; }
+        if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
+        if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
+        if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
         latestRows = [];
