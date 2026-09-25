@@ -690,13 +690,57 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   document.getElementById("cancelReplyBtn").onclick = cancelReply;
 
   // ---------- Delete own message ----------
-  async function deleteMessage(id) {
+  let pendingDeletions = {};
+
+  function showToast(message, actionLabel, onAction, duration = 5000) {
+    const existing = document.getElementById("appToast");
+    if (existing) existing.remove();
+    const toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-xl";
+    toast.innerHTML = `<span>${escapeHtml(message)}</span>` + (actionLabel ? `<button type="button" class="font-black text-pink-300">${escapeHtml(actionLabel)}</button>` : "");
+    document.body.appendChild(toast);
+    if (actionLabel && onAction) {
+      toast.querySelector("button").onclick = () => { onAction(); toast.remove(); };
+    }
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, duration);
+  }
+
+  function deleteMessage(id) {
     const m = latestRows.find((x) => x.id === id);
-    if (!m || m.user_id !== currentUser.id) return;
-    if (!confirm("Delete this message?")) return;
-    deleteRealtimeMessage({ id });
+    if (!m || m.user_id !== currentUser.id || pendingDeletions[id]) return;
+    latestRows = latestRows.filter((x) => x.id !== id);
+    renderMessages(latestRows);
+    const timer = setTimeout(() => finalizeDelete(id), 5000);
+    pendingDeletions[id] = { row: m, timer };
+    showToast("Message deleted", "Undo", () => undoDelete(id), 5000);
+  }
+
+  function undoDelete(id) {
+    const pending = pendingDeletions[id];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    delete pendingDeletions[id];
+    if (!latestRows.some((x) => x.id === id)) {
+      latestRows = [pending.row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      renderMessages(latestRows);
+    }
+  }
+
+  async function finalizeDelete(id) {
+    const pending = pendingDeletions[id];
+    delete pendingDeletions[id];
+    if (!pending) return;
+    const m = pending.row;
     const { error } = await supabaseClient.from("messages").delete().eq("id", id);
-    if (error) { alert(error.message); await loadMessages(); return; }
+    if (error) {
+      console.warn(error);
+      if (!latestRows.some((x) => x.id === id)) {
+        latestRows = [m, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        renderMessages(latestRows);
+      }
+      return;
+    }
     // Best-effort cleanup of any attached media file (ignored if it fails).
     const mediaUrl = m.image_url || m.audio_url;
     if (mediaUrl) {
@@ -853,15 +897,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         const countLabel = matches.length ? ` ${matches.length}` : "";
         const style = matches.length
           ? (mineReacted ? "border-violet-400 bg-violet-100 text-violet-700" : "border-transparent bg-white/70 text-slate-500")
-          : "border-transparent text-slate-400 opacity-50 hover:opacity-100";
-        return `<button type="button" data-action="react-toggle" data-id="${escapeHtml(m.id)}" data-emoji="${emoji}" class="rounded-full border px-1.5 py-0.5 text-xs font-bold ${style}">${emoji}${countLabel}</button>`;
+          : "border-transparent text-slate-400 opacity-60 hover:opacity-100";
+        return `<button type="button" data-action="react-toggle" data-id="${escapeHtml(m.id)}" data-emoji="${emoji}" class="min-h-[34px] rounded-full border px-2.5 py-1.5 text-base font-bold ${style}">${emoji}${countLabel}</button>`;
       }).join("");
 
       const actionRow = `
-        <div class="mt-1 flex flex-wrap items-center gap-1.5 px-1">
+        <div class="mt-1.5 flex flex-wrap items-center gap-2 px-1">
           ${reactionRow}
-          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="min-h-[26px] min-w-[26px] rounded-full px-2 py-1 text-xs font-bold text-violet-400 hover:bg-violet-50">↩</button>
-          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="ml-1 min-h-[26px] min-w-[26px] rounded-full border border-pink-100 px-2 py-1 text-xs font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
+          <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="min-h-[34px] min-w-[34px] rounded-full px-2.5 py-1.5 text-base font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="ml-1 min-h-[34px] min-w-[34px] rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
       const bubble = `
