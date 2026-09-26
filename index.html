@@ -154,7 +154,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     <button type="button" id="cancelReplyBtn" class="flex-none text-violet-400">✕</button>
   </div>
 
-  <form id="sendForm" class="mt-2 mb-2 flex flex-none items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
+  <form id="sendForm" class="relative mt-2 mb-2 flex flex-none items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
+    <div id="mentionDropdown" class="hidden absolute bottom-full left-2 z-30 mb-1 max-h-40 w-56 overflow-y-auto rounded-2xl border-2 border-violet-100 bg-white shadow-lg"></div>
     <input type="file" id="photoInput" accept="image/*" class="hidden" />
     <input type="file" id="avatarInput" accept="image/*" class="hidden" />
     <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
@@ -480,8 +481,6 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let eventsCache = [];
   let replyingTo = null;
   let seenMessageIds = new Set();
-  let readStatesChannel = null;
-  let allReadStates = [];
   let birthdayConfettiShown = false;
   let searchQuery = "";
 
@@ -763,6 +762,145 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
   document.getElementById("cancelReplyBtn").onclick = cancelReply;
 
+  // ---------- Search ----------
+  const searchBarEl = document.getElementById("searchBar");
+  const searchInputEl = document.getElementById("searchInput");
+  document.getElementById("searchToggleBtn").onclick = () => {
+    const isHidden = searchBarEl.classList.contains("hidden");
+    if (isHidden) {
+      searchBarEl.classList.remove("hidden");
+      searchInputEl.focus();
+    } else {
+      searchBarEl.classList.add("hidden");
+      searchInputEl.value = "";
+      searchQuery = "";
+      paintMessageList();
+    }
+  };
+  document.getElementById("searchCloseBtn").onclick = () => {
+    searchBarEl.classList.add("hidden");
+    searchInputEl.value = "";
+    searchQuery = "";
+    paintMessageList();
+  };
+  searchInputEl.addEventListener("input", () => {
+    searchQuery = searchInputEl.value;
+    paintMessageList();
+  });
+
+  // ---------- @Mentions ----------
+  const messageInputEl = document.getElementById("messageInput");
+  const mentionDropdownEl = document.getElementById("mentionDropdown");
+
+  function getMentionQuery() {
+    const val = messageInputEl.value;
+    const pos = messageInputEl.selectionStart ?? val.length;
+    const uptoCursor = val.slice(0, pos);
+    const match = uptoCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    return match ? match[1] : null;
+  }
+
+  function updateMentionDropdown() {
+    const q = getMentionQuery();
+    if (q === null || !currentUser) { mentionDropdownEl.classList.add("hidden"); return; }
+    const qLower = q.toLowerCase();
+    const candidates = Object.values(profilesCache)
+      .filter((p) => p.id !== currentUser.id && p.full_name)
+      .filter((p) => p.full_name.toLowerCase().includes(qLower))
+      .slice(0, 6);
+    if (!candidates.length) { mentionDropdownEl.classList.add("hidden"); return; }
+    mentionDropdownEl.innerHTML = candidates.map((p) => `
+      <button type="button" data-mention="${escapeHtml(p.full_name)}" class="block w-full px-3 py-2 text-left text-sm font-bold text-violet-700 hover:bg-violet-50">${escapeHtml(p.full_name)}</button>
+    `).join("");
+    mentionDropdownEl.classList.remove("hidden");
+  }
+
+  messageInputEl.addEventListener("input", updateMentionDropdown);
+  messageInputEl.addEventListener("blur", () => {
+    setTimeout(() => mentionDropdownEl.classList.add("hidden"), 150);
+  });
+  mentionDropdownEl.addEventListener("mousedown", (e) => {
+    // Use mousedown (fires before input's blur) so the click isn't lost.
+    const btn = e.target.closest("[data-mention]");
+    if (!btn) return;
+    e.preventDefault();
+    const name = btn.dataset.mention;
+    const val = messageInputEl.value;
+    const pos = messageInputEl.selectionStart ?? val.length;
+    const uptoCursor = val.slice(0, pos);
+    const rest = val.slice(pos);
+    const newUpto = uptoCursor.replace(/(?:^|\s)@([^\s@]*)$/, (whole) => (whole.startsWith(" ") ? " " : "") + "@" + name + " ");
+    messageInputEl.value = newUpto + rest;
+    mentionDropdownEl.classList.add("hidden");
+    messageInputEl.focus();
+  });
+
+  function renderContentWithMentions(content) {
+    const names = Object.values(profilesCache)
+      .map((p) => p.full_name)
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    if (!names.length) return escapeHtml(content);
+    const pattern = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const re = new RegExp("@(" + pattern + ")(?=[\\s.,!?;:]|$)", "g");
+    let result = "";
+    let lastIndex = 0;
+    let match;
+    while ((match = re.exec(content)) !== null) {
+      result += escapeHtml(content.slice(lastIndex, match.index));
+      result += `<span class="font-black" style="color:var(--accent-dark)">@${escapeHtml(match[1])}</span>`;
+      lastIndex = re.lastIndex;
+    }
+    result += escapeHtml(content.slice(lastIndex));
+    return result;
+  }
+
+  function mentionsMe(content) {
+    if (!content || !currentUser) return false;
+    const myName = profilesCache[currentUser.id]?.full_name;
+    if (!myName) return false;
+    const escaped = myName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp("@" + escaped + "(?=[\\s.,!?;:]|$)").test(content);
+  }
+
+  // ---------- Read receipts ----------
+  let readStateCache = {};
+  let readStateChannel = null;
+
+  async function loadAllReadStates() {
+    const { data, error } = await supabaseClient.from("message_read_state").select("*");
+    if (error) {
+      console.warn("Read receipts unavailable. Run the supplied SQL migration.", error);
+      return;
+    }
+    readStateCache = {};
+    (data || []).forEach((row) => { readStateCache[row.user_id] = row.last_read_at; });
+  }
+
+  function setupReadStateRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (readStateChannel) supabaseClient.removeChannel(readStateChannel);
+    readStateChannel = supabaseClient
+      .channel("read-state-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "message_read_state" }, ({ new: row, eventType, old }) => {
+        if (eventType === "DELETE") delete readStateCache[old.user_id];
+        else readStateCache[row.user_id] = row.last_read_at;
+        paintMessageList();
+      })
+      .subscribe();
+  }
+
+  function renderReadReceipt(m, mine) {
+    if (!mine) return "";
+    const readerNames = Object.keys(readStateCache)
+      .filter((uid) => uid !== currentUser.id)
+      .filter((uid) => readStateCache[uid] && new Date(readStateCache[uid]) >= new Date(m.created_at))
+      .map((uid) => profilesCache[uid]?.full_name || "A classmate");
+    if (!readerNames.length) return "";
+    const label = readerNames.length <= 2 ? readerNames.join(" & ") : `${readerNames.length} classmates`;
+    return `<div class="mt-0.5 px-1 text-[10px] font-bold text-violet-300">👀 Seen by ${escapeHtml(label)}</div>`;
+  }
+
   // ---------- Delete own message ----------
   let pendingDeletions = {};
 
@@ -1031,42 +1169,63 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     }
   }, true);
 
+  function matchesSearch(m, q) {
+    if (!q) return true;
+    const hay = `${m.content || ""} ${m.user_name || ""}`.toLowerCase();
+    return hay.includes(q);
+  }
+
   function renderMessages(rows) {
-    const list = document.getElementById("messageList");
     latestRows = [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    if (!latestRows.length) {
-      list.innerHTML = `
-        <div class="py-16 text-center">
-          <img src="mascot.png" alt="" class="float mx-auto h-24 w-24 object-contain" />
-          <p class="display mt-4 text-lg font-semibold text-violet-700">Nothing here yet</p>
-          <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
-        </div>`;
-      seenMessageIds = new Set();
+    paintMessageList();
+  }
+
+  function paintMessageList() {
+    const list = document.getElementById("messageList");
+    const q = searchQuery.trim().toLowerCase();
+    const visibleRows = q ? latestRows.filter((m) => matchesSearch(m, q)) : latestRows;
+
+    if (!visibleRows.length) {
+      list.innerHTML = q
+        ? `
+          <div class="py-16 text-center">
+            <p class="display text-lg font-semibold text-violet-700">No matches</p>
+            <p class="text-sm font-bold text-violet-400">Try a different name or word.</p>
+          </div>`
+        : `
+          <div class="py-16 text-center">
+            <img src="mascot.png" alt="" class="float mx-auto h-24 w-24 object-contain" />
+            <p class="display mt-4 text-lg font-semibold text-violet-700">Nothing here yet</p>
+            <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
+          </div>`;
+      if (!q) seenMessageIds = new Set();
       renderPinnedStrip();
       return;
     }
 
     let lastDay = null;
     let unreadDividerAdded = false;
-    const html = latestRows.map((m) => {
+    const html = visibleRows.map((m) => {
       const mine = m.user_id === currentUser.id;
       const tone = toneFor(m.user_name);
-      const isUnread = !mine && (!lastReadAt || new Date(m.created_at) > new Date(lastReadAt));
-      const isNew = !seenMessageIds.has(m.id);
+      const isUnread = !q && !mine && (!lastReadAt || new Date(m.created_at) > new Date(lastReadAt));
+      const isNew = !q && !seenMessageIds.has(m.id);
       let dateSep = "";
-      const label = dayLabel(m.created_at);
-      if (label !== lastDay) {
-        lastDay = label;
-        dateSep = `
-          <div class="my-2 flex items-center gap-3 px-2">
-            <div class="torn-divider flex-1"></div>
-            <span class="display text-xs font-semibold text-violet-400">${label}</span>
-            <div class="torn-divider flex-1"></div>
-          </div>`;
+      if (!q) {
+        const label = dayLabel(m.created_at);
+        if (label !== lastDay) {
+          lastDay = label;
+          dateSep = `
+            <div class="my-2 flex items-center gap-3 px-2">
+              <div class="torn-divider flex-1"></div>
+              <span class="display text-xs font-semibold text-violet-400">${label}</span>
+              <div class="torn-divider flex-1"></div>
+            </div>`;
+        }
       }
 
       let unreadDivider = "";
-      if (isUnread && !unreadDividerAdded) {
+      if (!q && isUnread && !unreadDividerAdded) {
         unreadDividerAdded = true;
         unreadDivider = `
           <div class="my-3 flex items-center gap-3 px-2">
@@ -1090,7 +1249,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (m.audio_url) {
         parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
       }
-      if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
+      if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${renderContentWithMentions(m.content)}</div>`);
 
       const reactionRow = PRESET_EMOJIS.map((emoji) => {
         const matches = reactionsCache.filter((r) => String(r.message_id) === String(m.id) && r.emoji === emoji);
@@ -1110,6 +1269,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="relative z-20 ml-1 min-h-[34px] min-w-[34px] cursor-pointer rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
+      const readRow = renderReadReceipt(m, mine);
+
       const bubble = `
         <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${isNew ? "msg-in" : ""}">
           ${mine ? "" : avatarHtml(m.user_id, m.user_name, "mb-1 h-8 w-8")}
@@ -1120,17 +1281,20 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
               <div class="mt-1 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}">${formatTime(m.created_at)}</div>
             </div>
             ${actionRow}
+            ${readRow}
           </div>
         </div>`;
       return unreadDivider + dateSep + bubble;
     }).join("");
 
     list.innerHTML = html;
-    seenMessageIds = new Set(latestRows.map((m) => m.id));
+    if (!q) {
+      seenMessageIds = new Set(latestRows.map((m) => m.id));
+      markNewestAsReadWhenAtTop();
+    }
     renderPinnedStrip();
     // Newest message is at the top. Never force the scroll position after a realtime update.
     // This prevents the page from jumping while the user is reading older messages.
-    markNewestAsReadWhenAtTop();
   }
 
   async function loadMessages() {
@@ -1149,6 +1313,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (exists) return;
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
+    if (row.user_id !== currentUser.id && mentionsMe(row.content)) {
+      showToast(`🔔 ${row.user_name || "Someone"} mentioned you`, null, null, 5000);
+    }
   }
 
   function updateRealtimeMessage(row) {
@@ -1199,17 +1366,20 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
         if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
         if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
+        if (readStateChannel) { supabaseClient.removeChannel(readStateChannel); readStateChannel = null; }
 
         await loadReadState();
         await loadProfiles();
         await ensureMyProfile();
         await loadReactions();
         await loadEvents();
+        await loadAllReadStates();
         await loadMessages();
         setupRealtime();
         setupReactionsRealtime();
         setupProfilesRealtime();
         setupEventsRealtime();
+        setupReadStateRealtime();
         renderUpcoming();
 
         const onlineBadge = document.getElementById("onlineBadge");
@@ -1230,6 +1400,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if (reactionsChannel) { supabaseClient.removeChannel(reactionsChannel); reactionsChannel = null; }
         if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
         if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
+        if (readStateChannel) { supabaseClient.removeChannel(readStateChannel); readStateChannel = null; }
+        readStateCache = {};
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
         latestRows = [];
