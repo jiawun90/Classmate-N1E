@@ -25,6 +25,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       --bubblegum: #f472b6;
       --sky: #38bdf8;
       --mint: #34d399;
+      --accent: #7c3aed;
+      --accent-dark: #6d28d9;
     }
     body { font-family: Nunito, ui-rounded, system-ui, sans-serif; }
     .display { font-family: "Fredoka", Nunito, ui-rounded, system-ui, sans-serif; }
@@ -54,6 +56,11 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       100% { transform: translateY(-70px) rotate(var(--rot, 180deg)); opacity: 0; }
     }
     .confetti-bit { position: fixed; z-index: 60; pointer-events: none; border-radius: 2px; animation: confetti-fall .7s ease-out forwards; }
+    @keyframes balloon-rise {
+      0% { transform: translateY(0) translateX(0) rotate(-6deg); opacity: 1; }
+      50% { transform: translateY(-55vh) translateX(15px) rotate(6deg); }
+      100% { transform: translateY(-115vh) translateX(-10px) rotate(-4deg); opacity: 0; }
+    }
     #messageList { scrollbar-width: thin; scrollbar-color: #c4b5fd transparent; }
     #messageList::-webkit-scrollbar { width: 8px; }
     #messageList::-webkit-scrollbar-track { background: transparent; }
@@ -102,7 +109,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         <input id="password" type="password" required minlength="6" placeholder="At least 6 characters" class="w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none focus:border-pink-400" />
       </div>
       <p id="authError" class="hidden rounded-2xl bg-pink-50 px-3 py-2 text-sm font-bold text-pink-600"></p>
-      <button id="authSubmit" class="w-full rounded-2xl bg-violet-600 py-3.5 font-black text-white shadow hover:bg-violet-700">Register & enter</button>
+      <button id="authSubmit" style="background:var(--accent)" class="w-full rounded-2xl py-3.5 font-black text-white shadow">Register & enter</button>
     </form>
     <p class="mt-5 text-center text-xs font-bold text-violet-300">For N1E classmates only</p>
   </div>
@@ -118,6 +125,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       </div>
     </div>
     <div class="flex flex-none items-center gap-2">
+      <button id="searchToggleBtn" type="button" title="Search messages" class="h-9 w-9 flex-none rounded-full bg-violet-50 text-base">🔍</button>
       <button id="myAvatarBtn" type="button" title="Your profile" class="h-9 w-9 flex-none overflow-hidden rounded-full border-2 border-violet-200">
         <img id="myAvatarImg" class="hidden h-full w-full object-cover" alt="" />
         <span id="myAvatarInitials" class="display flex h-full w-full items-center justify-center bg-violet-400 text-xs font-semibold text-white"></span>
@@ -125,6 +133,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <button id="logoutBtn" class="rounded-full bg-pink-100 px-3 py-2 text-sm font-black text-violet-700">Logout</button>
     </div>
   </header>
+
+  <div id="searchBar" class="hidden mt-2 flex flex-none items-center gap-2 rounded-2xl border-2 border-violet-100 bg-white px-3 py-2">
+    <span class="text-sm">🔍</span>
+    <input id="searchInput" type="text" placeholder="Search messages or names..." class="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none" />
+    <button id="searchCloseBtn" type="button" class="flex-none text-violet-400">✕</button>
+  </div>
+
+  <div id="pinnedStrip" class="hidden mt-2 flex-none space-y-1.5"></div>
 
   <div class="mt-2 flex flex-none items-center gap-2 overflow-x-auto px-1">
     <div id="upcomingStrip" class="flex flex-1 items-center gap-2"></div>
@@ -144,7 +160,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
     <button type="button" id="micBtn" title="Record a voice message" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎤</button>
     <input id="messageInput" maxlength="500" placeholder="Share something fun..." class="min-h-12 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
-    <button class="h-12 flex-none rounded-2xl bg-violet-600 px-5 font-black text-white">Send</button>
+    <button style="background:var(--accent)" class="h-12 flex-none rounded-2xl px-5 font-black text-white">Send</button>
   </form>
 
   <div id="profileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -156,6 +172,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       </div>
       <label class="mt-4 block text-sm font-black text-violet-700">Birthday (optional)</label>
       <input type="date" id="birthdayInput" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
+      <label class="mt-4 block text-sm font-black text-violet-700">Color theme</label>
+      <div id="themeSwatches" class="mt-1 flex items-center gap-2"></div>
       <div class="mt-5 flex gap-2">
         <button type="button" id="profileCloseBtn" class="flex-1 rounded-2xl bg-violet-50 py-3 font-black text-violet-600">Close</button>
         <button type="button" id="profileSaveBtn" class="flex-1 rounded-2xl bg-violet-600 py-3 font-black text-white">Save</button>
@@ -462,6 +480,55 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let eventsCache = [];
   let replyingTo = null;
   let seenMessageIds = new Set();
+  let readStatesChannel = null;
+  let allReadStates = [];
+  let birthdayConfettiShown = false;
+  let searchQuery = "";
+
+  const THEMES = {
+    violet:   { accent: "#7c3aed", accentDark: "#6d28d9", ink: "#4c1d95", blob1: "#fde68a", blob2: "#f9a8d4", blob3: "#7dd3fc", blob4: "#6ee7b7", paper: "#fff6e8" },
+    sky:      { accent: "#0284c7", accentDark: "#0369a1", ink: "#0c4a6e", blob1: "#bae6fd", blob2: "#a5f3fc", blob3: "#fde68a", blob4: "#c7d2fe", paper: "#eff9ff" },
+    bubblegum:{ accent: "#db2777", accentDark: "#be185d", ink: "#831843", blob1: "#fbcfe8", blob2: "#fef08a", blob3: "#bae6fd", blob4: "#bbf7d0", paper: "#fff5fa" },
+    mint:     { accent: "#059669", accentDark: "#047857", ink: "#064e3b", blob1: "#bbf7d0", blob2: "#fde68a", blob3: "#a5f3fc", blob4: "#fbcfe8", paper: "#f2fff8" },
+    sunset:   { accent: "#ea580c", accentDark: "#c2410c", ink: "#7c2d12", blob1: "#fed7aa", blob2: "#fecaca", blob3: "#fde68a", blob4: "#fbcfe8", paper: "#fff8f0" },
+  };
+
+  function applyTheme(name) {
+    const t = THEMES[name] || THEMES.violet;
+    const root = document.documentElement;
+    root.style.setProperty("--accent", t.accent);
+    root.style.setProperty("--accent-dark", t.accentDark);
+    root.style.setProperty("--ink", t.ink);
+    const bg = document.querySelector(".playful");
+    if (bg) {
+      bg.style.background = `
+        radial-gradient(circle at 12% 18%, ${t.blob1} 0 90px, transparent 91px),
+        radial-gradient(circle at 88% 10%, ${t.blob2} 0 120px, transparent 121px),
+        radial-gradient(circle at 92% 78%, ${t.blob3} 0 140px, transparent 141px),
+        radial-gradient(circle at 8% 86%, ${t.blob4} 0 110px, transparent 111px),
+        ${t.paper}`;
+    }
+  }
+
+  function renderThemeSwatches(selected) {
+    const wrap = document.getElementById("themeSwatches");
+    wrap.innerHTML = Object.keys(THEMES).map((name) => {
+      const t = THEMES[name];
+      const ring = name === selected ? "ring-4 ring-offset-2 ring-violet-300" : "";
+      return `<button type="button" data-theme-pick="${name}" class="h-8 w-8 flex-none rounded-full border-2 border-white shadow ${ring}" style="background:${t.accent}"></button>`;
+    }).join("");
+    wrap.querySelectorAll("[data-theme-pick]").forEach((btn) => {
+      btn.onclick = async () => {
+        const name = btn.dataset.themePick;
+        applyTheme(name);
+        renderThemeSwatches(name);
+        profilesCache[currentUser.id] = { ...(profilesCache[currentUser.id] || {}), id: currentUser.id, theme: name };
+        const { error } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, theme: name });
+        if (error) console.warn("Could not save theme:", error);
+      };
+    });
+  }
+
 
   function dayLabel(iso) {
     const date = new Date(iso);
@@ -528,11 +595,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         full_name: currentUser.user_metadata?.full_name || currentUser.email || "Friend",
         avatar_url: null,
         birthday: null,
+        theme: "violet",
       };
       const { error } = await supabaseClient.from("profiles").upsert(row);
       if (!error) profilesCache[currentUser.id] = row;
       else console.warn("Could not create profile:", error);
     }
+    applyTheme(profilesCache[currentUser.id]?.theme || "violet");
     updateMyAvatarUI();
   }
 
@@ -570,6 +639,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function openProfileModal() {
     const p = profilesCache[currentUser.id] || {};
     document.getElementById("birthdayInput").value = p.birthday || "";
+    renderThemeSwatches(p.theme || "violet");
     const preview = document.getElementById("profileAvatarPreview");
     if (p.avatar_url) {
       preview.innerHTML = `<img src="${escapeHtml(p.avatar_url)}" class="h-full w-full object-cover" alt="" />`;
@@ -643,7 +713,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   async function toggleReaction(messageId, emoji) {
     if (!currentUser || !supabaseClient) return;
-    const existing = reactionsCache.find((r) => r.message_id === messageId && r.user_id === currentUser.id && r.emoji === emoji);
+    const existing = reactionsCache.find((r) => String(r.message_id) === String(messageId) && r.user_id === currentUser.id && r.emoji === emoji);
     if (existing) {
       reactionsCache = reactionsCache.filter((r) => r.id !== existing.id);
       renderMessages(latestRows);
@@ -708,6 +778,57 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       toast.querySelector("button").onclick = () => { onAction(); toast.remove(); };
     }
     setTimeout(() => { if (toast.parentNode) toast.remove(); }, duration);
+  }
+
+  // ---------- Image lightbox ----------
+  function openLightbox(url) {
+    let overlay = document.getElementById("lightboxOverlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "lightboxOverlay";
+      overlay.className = "fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4";
+      overlay.innerHTML = `
+        <button type="button" id="lightboxCloseBtn" class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-white">✕</button>
+        <img id="lightboxImg" class="max-h-full max-w-full touch-pinch-zoom rounded-xl object-contain" style="touch-action:pinch-zoom;" />`;
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+      document.body.appendChild(overlay);
+      overlay.querySelector("#lightboxCloseBtn").onclick = () => overlay.remove();
+    }
+    document.getElementById("lightboxImg").src = url;
+  }
+
+  // ---------- Pinned messages ----------
+  function togglePin(id) {
+    const m = latestRows.find((x) => String(x.id) === String(id));
+    if (!m) return;
+    const nextPinned = !m.pinned;
+    m.pinned = nextPinned; // optimistic
+    renderPinnedStrip();
+    renderMessages(latestRows);
+    supabaseClient.from("messages").update({ pinned: nextPinned }).eq("id", id).then(({ error }) => {
+      if (error) {
+        console.warn("Could not update pin:", error);
+        m.pinned = !nextPinned;
+        renderPinnedStrip();
+        renderMessages(latestRows);
+        showToast("Could not pin: " + error.message, null, null, 4000);
+      }
+    });
+  }
+
+  function renderPinnedStrip() {
+    const strip = document.getElementById("pinnedStrip");
+    const pinned = latestRows.filter((m) => m.pinned);
+    if (!pinned.length) { strip.classList.add("hidden"); strip.innerHTML = ""; return; }
+    strip.classList.remove("hidden");
+    strip.innerHTML = pinned.map((m) => `
+      <div class="flex items-center gap-2 rounded-2xl border-2 border-amber-200 bg-amber-50 px-3 py-2">
+        <span class="text-sm">📌</span>
+        <div class="min-w-0 flex-1 truncate text-xs font-bold text-amber-800">
+          <span class="font-black">${escapeHtml(m.user_id === currentUser.id ? "You" : (m.user_name || "Friend"))}:</span> ${escapeHtml(messagePreview(m))}
+        </div>
+        <button type="button" data-action="unpin-strip" data-id="${escapeHtml(m.id)}" class="flex-none text-xs font-black text-amber-500">Unpin</button>
+      </div>`).join("");
   }
 
   function deleteMessage(id) {
@@ -813,7 +934,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const [, m, d] = p.birthday.split("-").map(Number);
       const next = nextOccurrence(m, d);
       const days = Math.round((next - today) / 86400000);
-      if (days <= 30) items.push({ label: `🎂 ${p.full_name || "Someone"}'s birthday`, days });
+      if (days <= 30) items.push({ label: `🎂 ${p.full_name || "Someone"}'s birthday`, days, isBirthdayToday: days === 0, name: p.full_name || "Someone" });
     });
     eventsCache.forEach((ev) => {
       const d = new Date(ev.event_date + "T00:00:00");
@@ -823,8 +944,34 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     items.sort((a, b) => a.days - b.days);
     if (!items.length) { strip.innerHTML = ""; return; }
     strip.innerHTML = items.slice(0, 3).map((it) => `
-      <span class="whitespace-nowrap rounded-full border border-violet-100 bg-white/80 px-2.5 py-1 text-[11px] font-black text-violet-600">${escapeHtml(it.label)} · ${it.days === 0 ? "today" : it.days === 1 ? "tomorrow" : "in " + it.days + "d"}</span>
+      <span class="whitespace-nowrap rounded-full border border-violet-100 bg-white/80 px-2.5 py-1 text-[11px] font-black text-violet-600 ${it.isBirthdayToday ? "animate-pulse" : ""}">${escapeHtml(it.label)} · ${it.days === 0 ? "today" : it.days === 1 ? "tomorrow" : "in " + it.days + "d"}</span>
     `).join("");
+
+    const todaysBirthdayNames = items.filter((it) => it.isBirthdayToday).map((it) => it.name);
+    if (todaysBirthdayNames.length && !birthdayConfettiShown) {
+      birthdayConfettiShown = true;
+      celebrateBirthday(todaysBirthdayNames);
+    }
+  }
+
+  function celebrateBirthday(names) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      showToast(`🎂 It's ${names.join(" & ")}'s birthday today!`, null, null, 6000);
+      return;
+    }
+    const BALLOONS = ["🎈", "🎉", "🎂", "🎊"];
+    for (let i = 0; i < 22; i++) {
+      const el = document.createElement("div");
+      el.textContent = BALLOONS[i % BALLOONS.length];
+      el.style.cssText = `
+        position:fixed; z-index:70; left:${Math.random() * 100}vw; bottom:-40px;
+        font-size:${24 + Math.random() * 20}px; pointer-events:none;
+        animation: balloon-rise ${4 + Math.random() * 2.5}s ease-in forwards;
+        animation-delay:${Math.random() * 1.2}s;`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 8000);
+    }
+    showToast(`🎂 It's ${names.join(" & ")}'s birthday today!`, null, null, 6000);
   }
 
   document.getElementById("addEventBtn").onclick = () => document.getElementById("eventModal").classList.remove("hidden");
@@ -865,6 +1012,18 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         e.preventDefault();
         e.stopPropagation();
         toggleReaction(id, btn.getAttribute("data-emoji"));
+      } else if (action === "lightbox") {
+        e.preventDefault();
+        e.stopPropagation();
+        openLightbox(btn.getAttribute("data-url"));
+      } else if (action === "pin") {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePin(id);
+      } else if (action === "unpin-strip") {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePin(id);
       }
     } catch (err) {
       console.error(`Action "${action}" failed:`, err);
@@ -883,6 +1042,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
           <p class="text-sm font-bold text-violet-400">Be the first N1E classmate to share something fun.</p>
         </div>`;
       seenMessageIds = new Set();
+      renderPinnedStrip();
       return;
     }
 
@@ -919,13 +1079,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       const rotate = mine ? 0 : (((m.user_name || "").length * 7) % 5) - 2;
       const parts = [];
       if (m.reply_to) {
-        const orig = latestRows.find((x) => x.id === m.reply_to);
+        const orig = latestRows.find((x) => String(x.id) === String(m.reply_to));
         const origAuthor = orig ? (orig.user_id === currentUser.id ? "You" : (orig.user_name || "Friend")) : "a message";
         const origPreview = orig ? messagePreview(orig) : "";
         parts.push(`<div class="mb-1.5 rounded-xl border-l-4 border-violet-300 px-2 py-1 text-xs font-bold ${mine ? "bg-white/15 text-violet-100" : "bg-black/5 text-violet-500"}">↪ ${escapeHtml(origAuthor)}: ${escapeHtml(origPreview)}</div>`);
       }
       if (m.image_url) {
-        parts.push(`<a href="${escapeHtml(m.image_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(m.image_url)}" alt="shared photo" class="mb-1 max-h-64 w-full rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" /></a>`);
+        parts.push(`<img src="${escapeHtml(m.image_url)}" alt="shared photo" data-action="lightbox" data-url="${escapeHtml(m.image_url)}" class="mb-1 max-h-64 w-full cursor-zoom-in rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" />`);
       }
       if (m.audio_url) {
         parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
@@ -933,7 +1093,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       if (m.content) parts.push(`<div class="whitespace-pre-wrap break-words text-[15px] font-bold">${escapeHtml(m.content)}</div>`);
 
       const reactionRow = PRESET_EMOJIS.map((emoji) => {
-        const matches = reactionsCache.filter((r) => r.message_id === m.id && r.emoji === emoji);
+        const matches = reactionsCache.filter((r) => String(r.message_id) === String(m.id) && r.emoji === emoji);
         const mineReacted = matches.some((r) => r.user_id === currentUser.id);
         const countLabel = matches.length ? ` ${matches.length}` : "";
         const style = matches.length
@@ -946,6 +1106,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         <div class="mt-1.5 flex flex-wrap items-center gap-2 px-1">
           ${reactionRow}
           <button type="button" data-action="reply" data-id="${escapeHtml(m.id)}" class="relative z-20 min-h-[34px] min-w-[34px] cursor-pointer rounded-full px-2.5 py-1.5 text-base font-bold text-violet-400 hover:bg-violet-50">↩</button>
+          <button type="button" data-action="pin" data-id="${escapeHtml(m.id)}" title="${m.pinned ? "Unpin" : "Pin to top"}" class="relative z-20 min-h-[34px] min-w-[34px] cursor-pointer rounded-full px-2.5 py-1.5 text-base font-bold ${m.pinned ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:bg-amber-50 hover:text-amber-400"}">📌</button>
           ${mine ? `<button type="button" data-action="delete" data-id="${escapeHtml(m.id)}" class="relative z-20 ml-1 min-h-[34px] min-w-[34px] cursor-pointer rounded-full border border-pink-100 px-2.5 py-1.5 text-base font-bold text-pink-400 hover:bg-pink-50">🗑</button>` : ""}
         </div>`;
 
@@ -953,7 +1114,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         <div data-message-id="${escapeHtml(m.id)}" class="flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${isNew ? "msg-in" : ""}">
           ${mine ? "" : avatarHtml(m.user_id, m.user_name, "mb-1 h-8 w-8")}
           <div class="flex max-w-[78%] flex-col ${mine ? "items-end" : "items-start"}">
-            <div class="sticker-shadow w-full rounded-3xl border-2 px-4 py-3 ${mine ? "bg-violet-600 text-white border-violet-700 rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="--tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">
+            <div class="sticker-shadow w-full rounded-3xl border-2 px-4 py-3 ${mine ? "text-white rounded-br-md" : tone.bubble + " rounded-bl-md"}" style="${mine ? "background:var(--accent); border-color:var(--accent-dark);" : ""} --tone-shadow:${mine ? "rgba(109,40,217,.28)" : tone.shadow}; transform: rotate(${rotate}deg);">
               ${mine ? "" : `<div class="mb-1 text-xs font-black text-violet-700">${escapeHtml(m.user_name || "Friend")}</div>`}
               ${parts.join("")}
               <div class="mt-1 text-[11px] font-bold ${mine ? "text-violet-200" : "text-violet-400"}">${formatTime(m.created_at)}</div>
@@ -966,6 +1127,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
     list.innerHTML = html;
     seenMessageIds = new Set(latestRows.map((m) => m.id));
+    renderPinnedStrip();
     // Newest message is at the top. Never force the scroll position after a realtime update.
     // This prevents the page from jumping while the user is reading older messages.
     markNewestAsReadWhenAtTop();
@@ -983,14 +1145,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function addRealtimeMessage(row) {
     if (!row) return;
     const list = document.getElementById("messageList");
-    const exists = latestRows.some((m) => m.id === row.id);
+    const exists = latestRows.some((m) => String(m.id) === String(row.id));
     if (exists) return;
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
   }
 
   function updateRealtimeMessage(row) {
-    latestRows = latestRows.map((m) => m.id === row.id ? row : m);
+    latestRows = latestRows.map((m) => String(m.id) === String(row.id) ? row : m);
     renderMessages(latestRows);
   }
 
