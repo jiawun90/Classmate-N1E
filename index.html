@@ -98,11 +98,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <div id="nameWrap">
         <label class="mb-1 block text-sm font-black text-violet-700">Your name</label>
         <input id="displayName" maxlength="40" placeholder="e.g. Alex" class="w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none focus:border-pink-400" />
-        <p class="mt-1 text-xs font-bold text-violet-300">Use your real name so classmates know who you are.</p>
-      </div>
-      <div>
-        <label class="mb-1 block text-sm font-black text-violet-700">Email</label>
-        <input id="email" type="email" required placeholder="alex@example.com" class="w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none focus:border-pink-400" />
+        <p id="nameHint" class="mt-1 text-xs font-bold text-violet-300">Use your real name so classmates know who you are.</p>
       </div>
       <div>
         <label class="mb-1 block text-sm font-black text-violet-700">Password</label>
@@ -271,7 +267,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function setMode(isRegister) {
     registerMode = isRegister;
-    nameWrap.classList.toggle("hidden", !isRegister);
+    document.getElementById("nameHint").textContent = isRegister
+      ? "Use your real name so classmates know who you are."
+      : "Enter the same name you registered with.";
     authSubmit.textContent = isRegister ? "Register & enter" : "Login";
     tabLogin.className = isRegister
       ? "relative z-10 min-h-12 rounded-xl py-3 text-base font-black text-violet-400"
@@ -287,25 +285,42 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     authError.classList.remove("hidden");
   }
 
+  // Supabase Auth still needs an email under the hood, but families never see it:
+  // it's derived deterministically from the child's name (lowercased, no spaces).
+  function nameToEmail(name) {
+    const slug = name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    return `${slug}@n1e-classmates.local`;
+  }
+
   document.getElementById("authForm").onsubmit = async (e) => {
     e.preventDefault();
     if (!supabaseClient) return showError("Please add your Supabase URL and key first.");
-    const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
     const name = document.getElementById("displayName").value.trim();
     authSubmit.disabled = true;
     try {
+      if (!name) throw new Error("Please enter your name");
+      const email = nameToEmail(name);
       if (registerMode) {
-        if (!name) throw new Error("Please enter your name");
         const { error } = await supabaseClient.auth.signUp({
           email,
           password,
           options: { data: { full_name: name } },
         });
-        if (error) throw error;
+        if (error) {
+          if (/already registered|already exists/i.test(error.message)) {
+            throw new Error("That name is already taken. Try adding your last name too, e.g. \"Emma Lee\".");
+          }
+          throw error;
+        }
       } else {
         const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          if (/invalid login credentials/i.test(error.message)) {
+            throw new Error("Name or password is wrong. Check the spelling matches exactly what you registered with.");
+          }
+          throw error;
+        }
       }
     } catch (err) {
       showError(err.message || "Something went wrong");
