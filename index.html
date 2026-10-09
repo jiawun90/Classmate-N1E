@@ -71,6 +71,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       background-clip: padding-box;
     }
     #messageList::-webkit-scrollbar-thumb:hover { background-color: #a78bfa; }
+    #messageInput {
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    #profileModal > div {
+      max-height: min(92dvh, 640px);
+      overflow-y: auto;
+    }
     @media (prefers-reduced-motion: reduce) {
       .float, .msg-in, .confetti-bit { animation: none !important; }
     }
@@ -106,7 +114,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       </div>
       <p id="authError" class="hidden rounded-2xl bg-pink-50 px-3 py-2 text-sm font-bold text-pink-600"></p>
       <button id="authSubmit" style="background:var(--accent)" class="w-full rounded-2xl py-3.5 font-black text-white shadow">Register & enter</button>
+      <button type="button" id="forgotPasswordBtn" class="hidden w-full text-center text-sm font-black text-violet-500 underline decoration-violet-200 underline-offset-2">Forgot password?</button>
     </form>
+    <div id="forgotPasswordPanel" class="mt-4 hidden space-y-3 rounded-2xl border-2 border-violet-100 bg-violet-50/80 p-4">
+      <p class="text-sm font-bold text-violet-700">This board uses your name (not a real email), so we can't send a reset link.</p>
+      <p class="text-xs font-bold text-violet-500">If you still remember the old password: log in, open your profile (avatar), and change it there.</p>
+      <p class="text-xs font-bold text-violet-500">If you forgot it completely: ask your teacher to reset it in the Supabase dashboard (Authentication → Users → … → Reset password).</p>
+      <button type="button" id="forgotPasswordCloseBtn" class="w-full rounded-2xl bg-white py-2.5 text-sm font-black text-violet-600 shadow-sm">Got it</button>
+    </div>
     <p class="mt-5 text-center text-xs font-bold text-violet-300">For N1E classmates only</p>
   </div>
 </div>
@@ -161,14 +176,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     <button type="button" id="cancelReplyBtn" class="flex-none text-violet-400">✕</button>
   </div>
 
-  <form id="sendForm" class="relative mt-2 mb-2 flex flex-none items-center gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
+  <form id="sendForm" class="relative mt-2 mb-2 flex flex-none items-end gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
     <div id="mentionDropdown" class="hidden absolute bottom-full left-2 z-30 mb-1 max-h-40 w-56 overflow-y-auto rounded-2xl border-2 border-violet-100 bg-white shadow-lg"></div>
     <input type="file" id="photoInput" accept="image/*" class="hidden" />
     <input type="file" id="avatarInput" accept="image/*" class="hidden" />
     <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
     <button type="button" id="micBtn" title="Record a voice message" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎤</button>
-    <input id="messageInput" maxlength="500" placeholder="Share something fun..." class="min-h-12 flex-1 rounded-2xl bg-violet-50 px-4 font-bold outline-none" />
-    <button style="background:var(--accent)" class="h-12 flex-none rounded-2xl px-5 font-black text-white">Send</button>
+    <textarea id="messageInput" maxlength="500" rows="1" placeholder="Share something fun..." class="max-h-32 min-h-12 flex-1 resize-none overflow-y-auto rounded-2xl bg-violet-50 px-4 py-3 font-bold outline-none" style="field-sizing: content;"></textarea>
+    <button type="submit" style="background:var(--accent)" class="h-12 flex-none rounded-2xl px-5 font-black text-white">Send</button>
   </form>
 
   <div id="profileModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -182,6 +197,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       <input type="date" id="birthdayInput" class="mt-1 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none" />
       <label class="mt-4 block text-sm font-black text-violet-700">Color theme</label>
       <div id="themeSwatches" class="mt-1 flex items-center gap-2"></div>
+      <div class="mt-4 border-t-2 border-violet-50 pt-4">
+        <label class="block text-sm font-black text-violet-700">Change password</label>
+        <p class="mt-0.5 text-[11px] font-bold text-violet-300">Leave blank if you don't want to change it.</p>
+        <input type="password" id="newPasswordInput" minlength="6" autocomplete="new-password" placeholder="New password (min 6 chars)" class="mt-2 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none focus:border-pink-400" />
+        <input type="password" id="confirmPasswordInput" minlength="6" autocomplete="new-password" placeholder="Confirm new password" class="mt-2 w-full rounded-2xl border-2 border-violet-100 bg-violet-50 px-4 py-3 font-bold outline-none focus:border-pink-400" />
+        <p id="passwordChangeMsg" class="mt-1 hidden text-xs font-bold"></p>
+      </div>
       <div class="mt-5 flex gap-2">
         <button type="button" id="profileCloseBtn" class="flex-1 rounded-2xl bg-violet-50 py-3 font-black text-violet-600">Close</button>
         <button type="button" id="profileSaveBtn" class="flex-1 rounded-2xl bg-violet-600 py-3 font-black text-white">Save</button>
@@ -289,7 +311,18 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       ? "relative z-10 min-h-12 rounded-xl bg-white py-3 text-base font-black text-violet-700 shadow"
       : "relative z-10 min-h-12 rounded-xl py-3 text-base font-black text-violet-400";
     authError.classList.add("hidden");
+    const forgotBtn = document.getElementById("forgotPasswordBtn");
+    const forgotPanel = document.getElementById("forgotPasswordPanel");
+    if (forgotBtn) forgotBtn.classList.toggle("hidden", isRegister);
+    if (forgotPanel) forgotPanel.classList.add("hidden");
   }
+
+  document.getElementById("forgotPasswordBtn").onclick = () => {
+    document.getElementById("forgotPasswordPanel").classList.remove("hidden");
+  };
+  document.getElementById("forgotPasswordCloseBtn").onclick = () => {
+    document.getElementById("forgotPasswordPanel").classList.add("hidden");
+  };
 
   function showError(msg) {
     authError.textContent = msg;
@@ -399,15 +432,40 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     await saveReadState(data.created_at);
   }
 
+  function autoResizeMessageInput() {
+    const input = document.getElementById("messageInput");
+    if (!input) return;
+    input.style.height = "auto";
+    const max = 128;
+    input.style.height = Math.min(input.scrollHeight, max) + "px";
+  }
+
   document.getElementById("sendForm").onsubmit = async (e) => {
     e.preventDefault();
     const input = document.getElementById("messageInput");
     const content = input.value.trim();
     if (!content || !currentUser || !supabaseClient) return;
     input.value = "";
+    autoResizeMessageInput();
     burstConfetti(e.target.querySelector("button[type=submit], button:not([type])") || e.target);
     await sendMessage({ content });
   };
+
+  {
+    const input = document.getElementById("messageInput");
+    input.addEventListener("input", autoResizeMessageInput);
+    input.addEventListener("focus", () => {
+      setTimeout(() => {
+        try { input.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_) {}
+      }, 300);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById("sendForm").requestSubmit();
+      }
+    });
+  }
 
   async function uploadMedia(file, kind) {
     if (!currentUser || !supabaseClient) return;
@@ -686,6 +744,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     } else {
       preview.textContent = initialsFor(currentUser.user_metadata?.full_name || currentUser.email);
     }
+    const newPw = document.getElementById("newPasswordInput");
+    const confirmPw = document.getElementById("confirmPasswordInput");
+    const pwMsg = document.getElementById("passwordChangeMsg");
+    if (newPw) newPw.value = "";
+    if (confirmPw) confirmPw.value = "";
+    if (pwMsg) { pwMsg.classList.add("hidden"); pwMsg.textContent = ""; }
     document.getElementById("profileModal").classList.remove("hidden");
   }
   function closeProfileModal() {
@@ -716,11 +780,54 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   document.getElementById("profileSaveBtn").onclick = async () => {
     const val = document.getElementById("birthdayInput").value;
+    const newPassword = (document.getElementById("newPasswordInput")?.value || "").trim();
+    const confirmPassword = (document.getElementById("confirmPasswordInput")?.value || "").trim();
+    const pwMsg = document.getElementById("passwordChangeMsg");
+
+    if (newPassword || confirmPassword) {
+      if (newPassword.length < 6) {
+        if (pwMsg) {
+          pwMsg.textContent = "Password must be at least 6 characters.";
+          pwMsg.className = "mt-1 text-xs font-bold text-pink-600";
+          pwMsg.classList.remove("hidden");
+        }
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        if (pwMsg) {
+          pwMsg.textContent = "Passwords do not match.";
+          pwMsg.className = "mt-1 text-xs font-bold text-pink-600";
+          pwMsg.classList.remove("hidden");
+        }
+        return;
+      }
+      const { error: pwError } = await supabaseClient.auth.updateUser({ password: newPassword });
+      if (pwError) {
+        if (pwMsg) {
+          pwMsg.textContent = pwError.message || "Could not change password.";
+          pwMsg.className = "mt-1 text-xs font-bold text-pink-600";
+          pwMsg.classList.remove("hidden");
+        }
+        return;
+      }
+      if (pwMsg) {
+        pwMsg.textContent = "Password updated!";
+        pwMsg.className = "mt-1 text-xs font-bold text-emerald-600";
+        pwMsg.classList.remove("hidden");
+      }
+      document.getElementById("newPasswordInput").value = "";
+      document.getElementById("confirmPasswordInput").value = "";
+    }
+
     const { error } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, birthday: val || null });
     if (error) { alert(error.message); return; }
     profilesCache[currentUser.id] = { ...(profilesCache[currentUser.id] || {}), id: currentUser.id, birthday: val || null };
     renderUpcoming();
-    closeProfileModal();
+    if (newPassword) {
+      setTimeout(() => closeProfileModal(), 700);
+    } else {
+      closeProfileModal();
+    }
   };
 
   // ---------- Emoji reactions ----------
