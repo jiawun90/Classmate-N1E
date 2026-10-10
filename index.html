@@ -418,12 +418,17 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const { data, error } = await supabaseClient.from("messages").insert({
       user_id: currentUser.id,
       user_name: userName,
-      content: "",
+      content: payload.content || "",
       reply_to: replyId,
       ...payload,
     }).select("*").single();
     if (error) {
-      alert(error.message);
+      console.error("messages insert error:", error);
+      let msg = error.message || JSON.stringify(error);
+      if (/audio_url|column/i.test(msg)) {
+        msg += "\n\n请在 SQL Editor 执行:\nalter table messages add column if not exists audio_url text;";
+      }
+      alert("Save message failed: " + msg);
       return;
     }
     cancelReply();
@@ -436,8 +441,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const input = document.getElementById("messageInput");
     if (!input) return;
     input.style.height = "auto";
-    const max = 128;
-    input.style.height = Math.min(input.scrollHeight, max) + "px";
+    input.style.height = Math.min(input.scrollHeight, 128) + "px";
   }
 
   document.getElementById("sendForm").onsubmit = async (e) => {
@@ -468,17 +472,45 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   }
 
   async function uploadMedia(file, kind) {
-    if (!currentUser || !supabaseClient) return;
-    const ext = (file.name.split(".").pop() || (kind === "audio" ? "webm" : "jpg")).toLowerCase();
-    const path = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: uploadError } = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
-      contentType: file.type || undefined,
-    });
-    if (uploadError) {
-      alert("Upload failed: " + uploadError.message);
+    if (!currentUser || !supabaseClient) {
+      alert("Please sign in first.");
       return;
     }
-    const { data: urlData } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(path);
+    if (!file || !file.size) {
+      alert("录音是空的。请至少说 1–2 秒再按停止。");
+      return;
+    }
+    const fallbackExt = kind === "audio" ? "webm" : "jpg";
+    const ext = (file.name.split(".").pop() || fallbackExt).toLowerCase().replace(/[^a-z0-9]/g, "") || fallbackExt;
+    const path = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    let contentType = file.type || (kind === "audio" ? "audio/webm" : "image/jpeg");
+    if (kind === "audio" && (!contentType || contentType === "application/octet-stream")) {
+      contentType = ext === "m4a" || ext === "mp4" ? "audio/mp4" : ext === "ogg" ? "audio/ogg" : "audio/webm";
+    }
+
+    let result = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
+      contentType,
+      upsert: false,
+    });
+    let uploadError = result.error;
+
+    if (uploadError && kind === "audio") {
+      result = await supabaseClient.storage.from(MEDIA_BUCKET).upload(
+        path.replace(/\.[^.]+$/, ".webm"),
+        file,
+        { contentType: "audio/webm", upsert: false }
+      );
+      uploadError = result.error;
+    }
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      alert("Storage upload failed: " + (uploadError.message || JSON.stringify(uploadError)));
+      return;
+    }
+
+    const finalPath = (result.data && result.data.path) || path;
+    const { data: urlData } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(finalPath);
     if (kind === "image") {
       await sendMessage({ image_url: urlData.publicUrl });
     } else {
@@ -500,6 +532,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     photoBtn.textContent = "⏳";
     try {
       await uploadMedia(file, "image");
+    } catch (err) {
+      alert("Upload failed: " + (err.message || err));
     } finally {
       photoBtn.disabled = false;
       photoBtn.textContent = "📷";
@@ -511,40 +545,90 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   let audioChunks = [];
   let isRecording = false;
 
+  function pickAudioMimeType() {
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+    const candidates = [
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/ogg",
+    ];
+    for (const t of candidates) {
+      try {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      } catch (_) {}
+    }
+    return "";
+  }
+
   micBtn.onclick = async () => {
     if (!currentUser) return;
     if (!isRecording) {
+      if (!window.isSecureContext) {
+        alert("麦克风需要 HTTPS。请用 https:// 打开本站。");
+        return;
+      }
       if (!navigator.mediaDevices || !window.MediaRecorder) {
-        alert("Voice recording isn't supported in this browser.");
+        alert("这个浏览器不支持语音录音。请换 Chrome / Safari / Edge。");
         return;
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
+        const mimeType = pickAudioMimeType();
+        mediaRecorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+        const usedType = mediaRecorder.mimeType || mimeType || "audio/webm";
         mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
+          if (e.data && e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.onerror = () => {
+          alert("录音出错，请重试。");
+          isRecording = false;
+          micBtn.textContent = "🎤";
+          micBtn.classList.remove("bg-pink-200");
+          try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
         };
         mediaRecorder.onstop = async () => {
-          stream.getTracks().forEach((t) => t.stop());
-          const blob = new Blob(audioChunks, { type: "audio/webm" });
-          const file = new File([blob], `voice-${Date.now()}.webm`, { type: "audio/webm" });
+          try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+          if (!audioChunks.length) {
+            alert("没有录到声音。请允许麦克风，并至少录 1–2 秒再按停止。");
+            micBtn.textContent = "🎤";
+            return;
+          }
+          const blob = new Blob(audioChunks, { type: usedType });
+          const baseType = (usedType.split(";")[0] || "audio/webm").trim();
+          const ext = baseType.includes("mp4") ? "m4a" : baseType.includes("ogg") ? "ogg" : "webm";
+          const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: baseType });
           micBtn.textContent = "⏳";
           try {
             await uploadMedia(file, "audio");
+          } catch (err) {
+            alert("Upload failed: " + (err.message || err));
           } finally {
             micBtn.textContent = "🎤";
           }
         };
-        mediaRecorder.start();
+        mediaRecorder.start(250);
         isRecording = true;
         micBtn.textContent = "⏹️";
         micBtn.classList.add("bg-pink-200");
       } catch (err) {
-        alert("Could not access the microphone: " + (err.message || err));
+        const name = err && err.name;
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          alert("麦克风权限被拒绝。请在浏览器设置里允许麦克风后刷新。");
+        } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          alert("找不到麦克风设备。");
+        } else {
+          alert("无法使用麦克风: " + (err.message || err));
+        }
       }
     } else {
-      mediaRecorder.stop();
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        try { mediaRecorder.stop(); } catch (_) {}
+      }
       isRecording = false;
       micBtn.classList.remove("bg-pink-200");
     }
