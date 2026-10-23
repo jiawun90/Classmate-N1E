@@ -79,8 +79,31 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       max-height: min(92dvh, 640px);
       overflow-y: auto;
     }
+    @keyframes pet-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes pet-wiggle {
+      0%, 100% { transform: rotate(-4deg); }
+      50% { transform: rotate(4deg); }
+    }
+    .pet-happy { animation: pet-bounce 1.2s ease-in-out infinite; }
+    .pet-ok { animation: pet-wiggle 2.4s ease-in-out infinite; }
+    .pet-sad { filter: grayscale(0.25); opacity: 0.9; }
+    .pet-stat {
+      height: 8px;
+      border-radius: 999px;
+      background: #ede9fe;
+      overflow: hidden;
+    }
+    .pet-stat > i {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
     @media (prefers-reduced-motion: reduce) {
-      .float, .msg-in, .confetti-bit { animation: none !important; }
+      .float, .msg-in, .confetti-bit, .pet-happy, .pet-ok { animation: none !important; }
     }
   </style>
 </head>
@@ -163,6 +186,33 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   </div>
 
   <div id="pinnedStrip" class="hidden mt-2 flex-none space-y-1.5"></div>
+
+  <!-- Class pet: one shared buddy for everyone -->
+  <div id="classPetCard" class="mt-2 flex flex-none items-center gap-3 rounded-[1.5rem] border-4 border-white bg-gradient-to-r from-violet-50 to-pink-50 px-3 py-2.5 shadow-sm">
+    <button type="button" id="petFaceBtn" class="flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" title="Our class pet">🐣</button>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <p id="petNameLabel" class="truncate text-sm font-black text-violet-700">N1E Buddy</p>
+        <span id="petMoodLabel" class="truncate text-[11px] font-bold text-violet-400">waking up…</span>
+      </div>
+      <div class="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-black text-pink-500">🍎</span>
+          <div class="pet-stat min-w-0 flex-1"><i id="petHungerBar" style="width:80%;background:#f472b6"></i></div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-black text-amber-500">💛</span>
+          <div class="pet-stat min-w-0 flex-1"><i id="petHappyBar" style="width:80%;background:#fbbf24"></i></div>
+        </div>
+      </div>
+      <p id="petLastCare" class="mt-1 truncate text-[10px] font-bold text-violet-300">Everyone can help take care of me!</p>
+    </div>
+    <div class="flex flex-none flex-col gap-1">
+      <button type="button" data-pet-action="feed" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-pink-600 shadow-sm hover:bg-pink-50">🍎 Feed</button>
+      <button type="button" data-pet-action="pet" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-violet-600 shadow-sm hover:bg-violet-50">🤗 Pet</button>
+      <button type="button" data-pet-action="play" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-sky-600 shadow-sm hover:bg-sky-50">🎾 Play</button>
+    </div>
+  </div>
 
   <div class="mt-2 flex flex-none items-center gap-2 overflow-x-auto px-1">
     <div id="upcomingStrip" class="flex flex-1 items-center gap-2"></div>
@@ -1129,8 +1179,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       .filter((uid) => readStateCache[uid] && new Date(readStateCache[uid]) >= new Date(m.created_at))
       .map((uid) => profilesCache[uid]?.full_name || "A classmate");
     if (!readerNames.length) return "";
-    const label = readerNames.length <= 2 ? readerNames.join(" & ") : `${readerNames.length} classmates`;
-    return `<div class="mt-0.5 px-1 text-[10px] font-bold text-violet-300">👀 Seen by ${escapeHtml(label)}</div>`;
+    // Always list names so you can see exactly who read the message.
+    let label;
+    if (readerNames.length === 1) label = readerNames[0];
+    else if (readerNames.length === 2) label = readerNames.join(" & ");
+    else label = readerNames.slice(0, -1).join(", ") + " & " + readerNames[readerNames.length - 1];
+    return `<div class="mt-0.5 max-w-[78%] px-1 text-[10px] font-bold leading-snug text-violet-300">👀 Seen by ${escapeHtml(label)}</div>`;
   }
 
   // ---------- Delete own message ----------
@@ -1264,6 +1318,230 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }
     }
   }
+
+  // ---------- Class pet (shared by everyone) ----------
+  let classPet = null;
+  let petChannel = null;
+  let petActionLock = false;
+  const PET_COOLDOWN_MS = 20 * 1000; // 20s between actions for same user (client-side)
+  let lastPetActionAt = 0;
+
+  function clampStat(n) {
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  function applyPetDecay(row) {
+    if (!row) return row;
+    const updated = new Date(row.updated_at || row.last_action_at || Date.now()).getTime();
+    const hours = Math.max(0, (Date.now() - updated) / 3600000);
+    // Slow decay so kids don't panic if offline for a day
+    const hunger = clampStat((row.hunger ?? 80) - hours * 3);
+    const happiness = clampStat((row.happiness ?? 80) - hours * 2.5);
+    const energy = clampStat((row.energy ?? 80) - hours * 1.5);
+    return { ...row, hunger, happiness, energy };
+  }
+
+  function petEmoji(p) {
+    if (!p) return "🥚";
+    if (p.energy < 25) return "😴";
+    if (p.hunger < 30 || p.happiness < 30) return "🥺";
+    if (p.happiness >= 80 && p.hunger >= 60) return "🥰";
+    if (p.happiness >= 55) return "😊";
+    return "🐣";
+  }
+
+  function petMoodText(p) {
+    if (!p) return "waking up…";
+    if (p.energy < 25) return "sleepy…";
+    if (p.hunger < 30) return "so hungry!";
+    if (p.happiness < 30) return "wants a hug";
+    if (p.happiness >= 85 && p.hunger >= 70) return "super happy!";
+    if (p.happiness >= 55) return "feeling good";
+    return "okay";
+  }
+
+  function petFaceClass(p) {
+    if (!p) return "";
+    if (p.energy < 25) return "pet-sad";
+    if (p.hunger < 30 || p.happiness < 30) return "pet-sad";
+    if (p.happiness >= 80) return "pet-happy";
+    return "pet-ok";
+  }
+
+  function renderClassPet() {
+    const card = document.getElementById("classPetCard");
+    if (!card) return;
+    const p = classPet;
+    const face = document.getElementById("petFaceBtn");
+    const nameEl = document.getElementById("petNameLabel");
+    const moodEl = document.getElementById("petMoodLabel");
+    const hungerBar = document.getElementById("petHungerBar");
+    const happyBar = document.getElementById("petHappyBar");
+    const lastEl = document.getElementById("petLastCare");
+
+    if (!p) {
+      face.textContent = "🥚";
+      face.className = "flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm";
+      nameEl.textContent = "N1E Buddy";
+      moodEl.textContent = "set me up in Supabase";
+      hungerBar.style.width = "0%";
+      happyBar.style.width = "0%";
+      lastEl.textContent = "Run the class_pet SQL once, then refresh.";
+      return;
+    }
+
+    face.textContent = petEmoji(p);
+    face.className = "flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm " + petFaceClass(p);
+    nameEl.textContent = p.name || "N1E Buddy";
+    moodEl.textContent = petMoodText(p);
+    hungerBar.style.width = clampStat(p.hunger) + "%";
+    happyBar.style.width = clampStat(p.happiness) + "%";
+
+    if (p.last_action && p.last_action_at) {
+      const who = p.last_action_by && profilesCache[p.last_action_by]
+        ? (profilesCache[p.last_action_by].full_name || "A friend")
+        : "A friend";
+      const actionWord = p.last_action === "feed" ? "fed" : p.last_action === "play" ? "played with" : "petted";
+      const mins = Math.max(0, Math.round((Date.now() - new Date(p.last_action_at).getTime()) / 60000));
+      const when = mins < 1 ? "just now" : mins < 60 ? mins + "m ago" : Math.floor(mins / 60) + "h ago";
+      lastEl.textContent = `${who} ${actionWord} me · ${when}`;
+    } else {
+      lastEl.textContent = "Everyone can help take care of me!";
+    }
+  }
+
+  async function ensureClassPetRow() {
+    const { data, error } = await supabaseClient.from("class_pet").select("*").eq("id", 1).maybeSingle();
+    if (error) {
+      console.warn("class_pet table missing or blocked. Run the SQL migration.", error);
+      classPet = null;
+      renderClassPet();
+      return null;
+    }
+    if (!data) {
+      const seed = {
+        id: 1,
+        name: "N1E Buddy",
+        hunger: 80,
+        happiness: 80,
+        energy: 80,
+        updated_at: new Date().toISOString(),
+      };
+      const { data: created, error: insErr } = await supabaseClient.from("class_pet").insert(seed).select("*").single();
+      if (insErr) {
+        console.warn("Could not create class_pet row:", insErr);
+        classPet = null;
+        renderClassPet();
+        return null;
+      }
+      classPet = applyPetDecay(created);
+      renderClassPet();
+      return classPet;
+    }
+    classPet = applyPetDecay(data);
+    renderClassPet();
+    return classPet;
+  }
+
+  async function loadClassPet() {
+    await ensureClassPetRow();
+  }
+
+  function setupPetRealtime() {
+    if (!supabaseClient || !currentUser) return;
+    if (petChannel) supabaseClient.removeChannel(petChannel);
+    petChannel = supabaseClient
+      .channel("class-pet-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "class_pet" }, ({ new: row }) => {
+        if (row) {
+          classPet = applyPetDecay(row);
+          renderClassPet();
+        }
+      })
+      .subscribe();
+  }
+
+  async function careForPet(action) {
+    if (!currentUser || !supabaseClient || petActionLock) return;
+    if (!classPet) {
+      showToast("Pet not ready. Ask an adult to run the class_pet SQL.", null, null, 4000);
+      return;
+    }
+    const now = Date.now();
+    if (now - lastPetActionAt < PET_COOLDOWN_MS) {
+      const wait = Math.ceil((PET_COOLDOWN_MS - (now - lastPetActionAt)) / 1000);
+      showToast(`Wait ${wait}s — Buddy is catching a breath!`, null, null, 2500);
+      return;
+    }
+
+    // Re-read + decay so multiple kids stay in sync
+    const fresh = await ensureClassPetRow();
+    if (!fresh) return;
+
+    let { hunger, happiness, energy } = fresh;
+    if (action === "feed") {
+      if (hunger >= 95) {
+        showToast("Buddy is already full! Try a hug or play.", null, null, 3000);
+        return;
+      }
+      hunger = clampStat(hunger + 22);
+      happiness = clampStat(happiness + 8);
+      energy = clampStat(energy + 5);
+    } else if (action === "pet") {
+      happiness = clampStat(happiness + 18);
+      energy = clampStat(energy + 4);
+    } else if (action === "play") {
+      if (energy < 15) {
+        showToast("Buddy is too sleepy to play. Feed or pet first!", null, null, 3000);
+        return;
+      }
+      happiness = clampStat(happiness + 20);
+      energy = clampStat(energy - 12);
+      hunger = clampStat(hunger - 8);
+    } else {
+      return;
+    }
+
+    petActionLock = true;
+    lastPetActionAt = now;
+    const payload = {
+      id: 1,
+      hunger,
+      happiness,
+      energy,
+      last_action: action,
+      last_action_by: currentUser.id,
+      last_action_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    // Optimistic UI
+    classPet = { ...fresh, ...payload };
+    renderClassPet();
+
+    const { data, error } = await supabaseClient.from("class_pet").upsert(payload).select("*").single();
+    petActionLock = false;
+    if (error) {
+      console.warn("Pet care failed:", error);
+      showToast("Could not update pet: " + error.message, null, null, 4000);
+      await loadClassPet();
+      return;
+    }
+    classPet = applyPetDecay(data);
+    renderClassPet();
+    const msgs = {
+      feed: "🍎 Yum! Buddy feels less hungry.",
+      pet: "🤗 Buddy loves the hugs!",
+      play: "🎾 That was fun!",
+    };
+    showToast(msgs[action] || "Done!", null, null, 2500);
+  }
+
+  document.getElementById("classPetCard")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-pet-action]");
+    if (!btn) return;
+    e.preventDefault();
+    careForPet(btn.getAttribute("data-pet-action"));
+  });
 
   // ---------- Class events + birthdays ("Upcoming" strip) ----------
   async function loadEvents() {
@@ -1599,6 +1877,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
         if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
         if (readStateChannel) { supabaseClient.removeChannel(readStateChannel); readStateChannel = null; }
+        if (petChannel) { supabaseClient.removeChannel(petChannel); petChannel = null; }
 
         await loadReadState();
         await loadProfiles();
@@ -1606,12 +1885,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         await loadReactions();
         await loadEvents();
         await loadAllReadStates();
+        await loadClassPet();
         await loadMessages();
         setupRealtime();
         setupReactionsRealtime();
         setupProfilesRealtime();
         setupEventsRealtime();
         setupReadStateRealtime();
+        setupPetRealtime();
         renderUpcoming();
 
         const onlineBadge = document.getElementById("onlineBadge");
@@ -1633,7 +1914,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         if (profilesChannel) { supabaseClient.removeChannel(profilesChannel); profilesChannel = null; }
         if (eventsChannel) { supabaseClient.removeChannel(eventsChannel); eventsChannel = null; }
         if (readStateChannel) { supabaseClient.removeChannel(readStateChannel); readStateChannel = null; }
+        if (petChannel) { supabaseClient.removeChannel(petChannel); petChannel = null; }
         readStateCache = {};
+        classPet = null;
         boardPage.classList.add("hidden");
         authPage.classList.remove("hidden");
         latestRows = [];
