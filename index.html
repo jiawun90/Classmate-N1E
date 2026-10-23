@@ -189,7 +189,10 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   <!-- Class pet: one shared buddy for everyone -->
   <div id="classPetCard" class="mt-2 flex flex-none items-center gap-3 rounded-[1.5rem] border-4 border-white bg-gradient-to-r from-violet-50 to-pink-50 px-3 py-2.5 shadow-sm">
-    <button type="button" id="petFaceBtn" class="flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm" title="Our class pet">🐣</button>
+    <button type="button" id="petFaceBtn" class="relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm" title="Our class pet">
+      <img id="petFaceImg" src="mascot.png" alt="N1E Buddy" class="h-12 w-12 object-contain" />
+      <span id="petFaceBadge" class="absolute -bottom-0.5 -right-0.5 text-sm leading-none">💛</span>
+    </button>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
         <p id="petNameLabel" class="truncate text-sm font-black text-violet-700">N1E Buddy</p>
@@ -1341,13 +1344,14 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     return { ...row, hunger, happiness, energy };
   }
 
-  function petEmoji(p) {
-    if (!p) return "🥚";
+  function petStatusBadge(p) {
+    if (!p) return "💤";
     if (p.energy < 25) return "😴";
-    if (p.hunger < 30 || p.happiness < 30) return "🥺";
-    if (p.happiness >= 80 && p.hunger >= 60) return "🥰";
-    if (p.happiness >= 55) return "😊";
-    return "🐣";
+    if (p.hunger < 30) return "🍎";
+    if (p.happiness < 30) return "🥺";
+    if (p.happiness >= 85 && p.hunger >= 70) return "💕";
+    if (p.happiness >= 55) return "💛";
+    return "✨";
   }
 
   function petMoodText(p) {
@@ -1373,15 +1377,20 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!card) return;
     const p = classPet;
     const face = document.getElementById("petFaceBtn");
+    const faceImg = document.getElementById("petFaceImg");
+    const faceBadge = document.getElementById("petFaceBadge");
     const nameEl = document.getElementById("petNameLabel");
     const moodEl = document.getElementById("petMoodLabel");
     const hungerBar = document.getElementById("petHungerBar");
     const happyBar = document.getElementById("petHappyBar");
     const lastEl = document.getElementById("petLastCare");
 
+    const baseFaceClass = "relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm";
+
     if (!p) {
-      face.textContent = "🥚";
-      face.className = "flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm";
+      if (faceImg) faceImg.style.opacity = "0.5";
+      if (faceBadge) faceBadge.textContent = "💤";
+      face.className = baseFaceClass;
       nameEl.textContent = "N1E Buddy";
       moodEl.textContent = "set me up in Supabase";
       hungerBar.style.width = "0%";
@@ -1390,8 +1399,12 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       return;
     }
 
-    face.textContent = petEmoji(p);
-    face.className = "flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white text-3xl shadow-sm " + petFaceClass(p);
+    if (faceImg) {
+      faceImg.src = "mascot.png";
+      faceImg.style.opacity = (p.energy < 25 || p.hunger < 30 || p.happiness < 30) ? "0.85" : "1";
+    }
+    if (faceBadge) faceBadge.textContent = petStatusBadge(p);
+    face.className = baseFaceClass + " " + petFaceClass(p);
     nameEl.textContent = p.name || "N1E Buddy";
     moodEl.textContent = petMoodText(p);
     hungerBar.style.width = clampStat(p.hunger) + "%";
