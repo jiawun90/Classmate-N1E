@@ -102,8 +102,135 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       border-radius: 999px;
       transition: width 0.4s ease;
     }
+    /* Big aquarium */
+    #aquariumModal .tank {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1.5rem;
+      background:
+        radial-gradient(ellipse at 25% 15%, rgba(255,255,255,.5), transparent 42%),
+        radial-gradient(ellipse at 80% 30%, rgba(186,230,253,.35), transparent 40%),
+        linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, #0284c7 100%);
+      box-shadow:
+        inset 0 -28px 0 0 rgba(251, 191, 36, 0.4),
+        inset 0 0 40px rgba(7, 89, 133, 0.15),
+        inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    #aquariumModal .tank::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 18% 82%, rgba(255,255,255,.14) 0 14px, transparent 15px),
+        radial-gradient(circle at 72% 88%, rgba(255,255,255,.1) 0 9px, transparent 10px),
+        radial-gradient(circle at 48% 92%, rgba(255,255,255,.08) 0 18px, transparent 19px),
+        linear-gradient(105deg, rgba(255,255,255,.18) 0%, transparent 28%, transparent 72%, rgba(255,255,255,.08) 100%);
+      pointer-events: none;
+      z-index: 2;
+    }
+    #aquariumModal .tank::after {
+      content: "";
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      top: 6%;
+      height: 28%;
+      border-radius: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,.22), transparent);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .aq-goldfish {
+      position: absolute;
+      width: 64px;
+      height: 40px;
+      filter:
+        drop-shadow(0 10px 8px rgba(7, 89, 133, 0.35))
+        drop-shadow(0 2px 2px rgba(7, 89, 133, 0.2));
+      will-change: transform;
+      overflow: visible;
+    }
+    .aq-goldfish svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      display: block;
+    }
+    .aq-goldfish .fin-flutter {
+      transform-origin: 25% 50%;
+      animation: fin-flutter 1.1s ease-in-out infinite;
+    }
+    .aq-goldfish .fin-dorsal {
+      transform-origin: 50% 90%;
+      animation: fin-dorsal 1.4s ease-in-out infinite;
+    }
+    @keyframes fin-flutter {
+      0%, 100% { transform: scaleX(1) rotate(0deg); }
+      50% { transform: scaleX(0.88) rotate(-4deg); }
+    }
+    @keyframes fin-dorsal {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(3deg); }
+    }
+    #fishA { width: 108px; height: 64px; animation: goldfish-a 9s ease-in-out infinite; }
+    #fishB { width: 96px; height: 58px; animation: goldfish-b 11s ease-in-out infinite; animation-delay: -2s; }
+    #fishC { width: 90px; height: 52px; animation: goldfish-c 8s ease-in-out infinite; animation-delay: -4s; }
+    @keyframes goldfish-a {
+      0%   { left: 6%;  top: 38%; transform: scaleX(1) translateY(0); }
+      40%  { left: 68%; top: 26%; transform: scaleX(1) translateY(-6px); }
+      50%  { left: 74%; top: 48%; transform: scaleX(1) translateY(2px); }
+      51%  { left: 74%; top: 48%; transform: scaleX(-1) translateY(2px); }
+      90%  { left: 14%; top: 58%; transform: scaleX(-1) translateY(-4px); }
+      100% { left: 6%;  top: 38%; transform: scaleX(-1) translateY(0); }
+    }
+    @keyframes goldfish-b {
+      0%   { left: 60%; top: 55%; transform: scaleX(-1) translateY(0); }
+      45%  { left: 12%; top: 40%; transform: scaleX(-1) translateY(-8px); }
+      50%  { left: 10%; top: 42%; transform: scaleX(-1) translateY(0); }
+      51%  { left: 10%; top: 42%; transform: scaleX(1) translateY(0); }
+      100% { left: 60%; top: 55%; transform: scaleX(1) translateY(4px); }
+    }
+    @keyframes goldfish-c {
+      0%   { left: 30%; top: 62%; transform: scaleX(1) translateY(0); }
+      35%  { left: 55%; top: 50%; transform: scaleX(1) translateY(-10px); }
+      55%  { left: 70%; top: 64%; transform: scaleX(1) translateY(2px); }
+      56%  { left: 70%; top: 64%; transform: scaleX(-1) translateY(2px); }
+      100% { left: 30%; top: 62%; transform: scaleX(-1) translateY(0); }
+    }
+    .aq-goldfish.slow { animation-duration: 16s !important; opacity: 0.9; }
+    .aq-goldfish.fast { animation-duration: 6.5s !important; }
+    .aq-bubble {
+      position: absolute;
+      bottom: 12%;
+      border-radius: 999px;
+      background: rgba(255,255,255,.45);
+      border: 1px solid rgba(255,255,255,.65);
+      animation: aq-rise linear forwards;
+      pointer-events: none;
+    }
+    @keyframes aq-rise {
+      0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+      15%  { opacity: 0.85; }
+      100% { transform: translateY(-220px) scale(1); opacity: 0; }
+    }
+    .aq-weed {
+      position: absolute;
+      bottom: 8%;
+      width: 14px;
+      height: 48px;
+      border-radius: 999px 999px 4px 4px;
+      background: linear-gradient(180deg, #4ade80, #16a34a);
+      transform-origin: bottom center;
+      animation: weed-sway 3s ease-in-out infinite;
+    }
+    @keyframes weed-sway {
+      0%, 100% { transform: rotate(-6deg); }
+      50% { transform: rotate(6deg); }
+    }
     @media (prefers-reduced-motion: reduce) {
-      .float, .msg-in, .confetti-bit, .pet-happy, .pet-ok { animation: none !important; }
+      .float, .msg-in, .confetti-bit, .pet-happy, .pet-ok,
+      .aq-goldfish, .aq-goldfish .fin-flutter, .aq-goldfish .fin-dorsal,
+      .aq-bubble, .aq-weed { animation: none !important; }
     }
   </style>
 </head>
@@ -187,33 +314,225 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   <div id="pinnedStrip" class="hidden mt-2 flex-none space-y-1.5"></div>
 
-  <!-- Class pet: one shared buddy for everyone -->
-  <div id="classPetCard" class="mt-2 flex flex-none items-center gap-3 rounded-[1.5rem] border-4 border-white bg-gradient-to-r from-violet-50 to-pink-50 px-3 py-2.5 shadow-sm">
-    <button type="button" id="petFaceBtn" class="relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm" title="Our class pet">
-      <img id="petFaceImg" src="mascot.png" alt="N1E Buddy" class="h-12 w-12 object-contain" />
-      <span id="petFaceBadge" class="absolute -bottom-0.5 -right-0.5 text-sm leading-none">💛</span>
+  <!-- Class fish: one shared tank buddy for everyone -->
+  <div id="classPetCard" class="mt-2 flex flex-none items-center gap-3 rounded-[1.5rem] border-4 border-white bg-gradient-to-r from-sky-50 to-cyan-50 px-3 py-2.5 shadow-sm">
+    <button type="button" id="petFaceBtn" class="relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-sky-100 to-sky-200 shadow-sm" title="Our class goldfish">
+      <span id="petFaceImg" class="text-3xl leading-none" aria-hidden="true">🐠</span>
+      <span id="petFaceBadge" class="absolute -bottom-0.5 -right-0.5 text-sm leading-none">🫧</span>
     </button>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
-        <p id="petNameLabel" class="truncate text-sm font-black text-violet-700">N1E Buddy</p>
-        <span id="petMoodLabel" class="truncate text-[11px] font-bold text-violet-400">waking up…</span>
+        <p id="petNameLabel" class="truncate text-sm font-black text-sky-700">N1E Goldfish</p>
+        <span id="petMoodLabel" class="truncate text-[11px] font-bold text-sky-400">swimming…</span>
       </div>
       <div class="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
         <div class="flex items-center gap-1.5">
-          <span class="text-[10px] font-black text-pink-500">🍎</span>
-          <div class="pet-stat min-w-0 flex-1"><i id="petHungerBar" style="width:80%;background:#f472b6"></i></div>
+          <span class="text-[10px] font-black text-orange-500">🐟</span>
+          <div class="pet-stat min-w-0 flex-1"><i id="petHungerBar" style="width:80%;background:#38bdf8"></i></div>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="text-[10px] font-black text-amber-500">💛</span>
-          <div class="pet-stat min-w-0 flex-1"><i id="petHappyBar" style="width:80%;background:#fbbf24"></i></div>
+          <span class="text-[10px] font-black text-cyan-500">💧</span>
+          <div class="pet-stat min-w-0 flex-1"><i id="petHappyBar" style="width:80%;background:#22d3ee"></i></div>
         </div>
       </div>
-      <p id="petLastCare" class="mt-1 truncate text-[10px] font-bold text-violet-300">Everyone can help take care of me!</p>
+      <p id="petLastCare" class="mt-1 truncate text-[10px] font-bold text-sky-300">Everyone can help care for our fish!</p>
     </div>
     <div class="flex flex-none flex-col gap-1">
-      <button type="button" data-pet-action="feed" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-pink-600 shadow-sm hover:bg-pink-50">🍎 Feed</button>
-      <button type="button" data-pet-action="pet" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-violet-600 shadow-sm hover:bg-violet-50">🤗 Pet</button>
-      <button type="button" data-pet-action="play" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-sky-600 shadow-sm hover:bg-sky-50">🎾 Play</button>
+      <button type="button" data-pet-action="feed" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-orange-600 shadow-sm hover:bg-orange-50">🐟 Feed</button>
+      <button type="button" data-pet-action="pet" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-sky-600 shadow-sm hover:bg-sky-50">🫧 Bubbles</button>
+      <button type="button" data-pet-action="play" class="rounded-full bg-white px-2.5 py-1 text-xs font-black text-cyan-600 shadow-sm hover:bg-cyan-50">🌊 Play</button>
+    </div>
+  </div>
+
+  <!-- Expanded aquarium -->
+  <div id="aquariumModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-sky-900/50 p-3 backdrop-blur-[2px]">
+    <div class="flex w-full max-w-md flex-col overflow-hidden rounded-[2rem] border-4 border-white bg-white shadow-2xl">
+      <div class="flex items-center justify-between px-4 pt-3">
+        <div>
+          <p id="aqTitle" class="text-base font-black text-sky-700">N1E Goldfish Tank</p>
+          <p id="aqSubtitle" class="text-[11px] font-bold text-sky-400">Tap outside or ✕ to close</p>
+        </div>
+        <button type="button" id="aquariumCloseBtn" class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-lg font-black text-sky-500">✕</button>
+      </div>
+      <div class="tank mx-3 mt-2 h-56 sm:h-64">
+        <div class="aq-weed" style="left:12%;height:56px;animation-delay:.2s"></div>
+        <div class="aq-weed" style="left:22%;height:40px;animation-delay:.8s"></div>
+        <div class="aq-weed" style="left:78%;height:52px;animation-delay:.4s"></div>
+        <div class="aq-weed" style="left:88%;height:36px;animation-delay:1s"></div>
+        <div id="aqBubbles" class="pointer-events-none absolute inset-0"></div>
+        <!-- 3 goldfish with stronger volume / lighting -->
+        <div id="fishA" class="aq-goldfish" title="Orange fantail">
+          <svg viewBox="0 0 130 78" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gAbody" x1="0.15" y1="0" x2="0.85" y2="1">
+                <stop offset="0%" stop-color="#fed7aa"/>
+                <stop offset="35%" stop-color="#fb923c"/>
+                <stop offset="70%" stop-color="#ea580c"/>
+                <stop offset="100%" stop-color="#9a3412"/>
+              </linearGradient>
+              <radialGradient id="gAvol" cx="38%" cy="32%" r="55%">
+                <stop offset="0%" stop-color="#fff7ed" stop-opacity=".7"/>
+                <stop offset="45%" stop-color="#fdba74" stop-opacity=".25"/>
+                <stop offset="100%" stop-color="#7c2d12" stop-opacity=".35"/>
+              </radialGradient>
+              <linearGradient id="gAfin" x1="0" y1="0" x2="1" y2="0.6">
+                <stop offset="0%" stop-color="#fdba74"/>
+                <stop offset="55%" stop-color="#f97316"/>
+                <stop offset="100%" stop-color="#c2410c" stop-opacity=".45"/>
+              </linearGradient>
+              <filter id="gAsoft" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="1.2" result="b"/>
+                <feOffset dy="1" result="o"/>
+                <feFlood flood-color="#7c2d12" flood-opacity=".25"/>
+                <feComposite in2="o" operator="in"/>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#gAsoft)">
+              <g class="fin-flutter">
+                <path d="M32 39 C14 18, 0 14, 8 39 C0 62, 14 58, 32 39Z" fill="url(#gAfin)"/>
+                <path d="M34 39 C18 24, 8 22, 14 39 C8 54, 18 52, 34 39Z" fill="#fdba74" opacity=".4"/>
+              </g>
+              <g class="fin-dorsal">
+                <path d="M58 20 C68 4, 88 6, 92 22 C80 16, 66 16, 58 20Z" fill="url(#gAfin)"/>
+              </g>
+              <path d="M62 54 C68 66, 80 68, 86 54 C78 58, 68 56, 62 54Z" fill="url(#gAfin)"/>
+              <!-- body volume: base + belly shadow + highlight -->
+              <ellipse cx="74" cy="39" rx="36" ry="20" fill="url(#gAbody)"/>
+              <ellipse cx="74" cy="39" rx="36" ry="20" fill="url(#gAvol)"/>
+              <ellipse cx="74" cy="48" rx="28" ry="9" fill="#7c2d12" opacity=".18"/>
+              <ellipse cx="64" cy="32" rx="14" ry="7" fill="#fff7ed" opacity=".28"/>
+              <g opacity=".2" fill="none" stroke="#7c2d12" stroke-width=".65">
+                <path d="M54 30 q7 3.5 0 7"/><path d="M64 28 q7 3.5 0 7"/><path d="M74 27 q7 3.5 0 7"/>
+                <path d="M56 40 q7 3.5 0 7"/><path d="M66 39 q7 3.5 0 7"/><path d="M76 38 q7 3.5 0 7"/>
+              </g>
+              <path d="M96 31 C104 34, 104 46, 96 49" fill="none" stroke="#9a3412" stroke-width="1.2" opacity=".4"/>
+              <ellipse cx="100" cy="33" rx="5" ry="4.7" fill="#f8fafc"/>
+              <circle cx="101.4" cy="33" r="2.5" fill="#1c1917"/>
+              <circle cx="102.4" cy="31.8" r=".85" fill="#fff"/>
+              <ellipse cx="99.2" cy="34.2" rx="1.2" ry=".7" fill="#fff" opacity=".35"/>
+              <path d="M110 40 q3.5 2.2 0 3.5" fill="none" stroke="#9a3412" stroke-width="1.1" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+        <div id="fishB" class="aq-goldfish" title="Red-and-white sarasa">
+          <svg viewBox="0 0 130 78" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gBbody" x1="0.2" y1="0" x2="0.7" y2="1">
+                <stop offset="0%" stop-color="#fffbeb"/>
+                <stop offset="50%" stop-color="#ffedd5"/>
+                <stop offset="100%" stop-color="#fdba74"/>
+              </linearGradient>
+              <radialGradient id="gBvol" cx="40%" cy="30%" r="55%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity=".65"/>
+                <stop offset="100%" stop-color="#9a3412" stop-opacity=".2"/>
+              </radialGradient>
+              <linearGradient id="gBfin" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#fecaca"/>
+                <stop offset="100%" stop-color="#dc2626" stop-opacity=".65"/>
+              </linearGradient>
+              <filter id="gBsoft" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="1.1" result="b"/>
+                <feOffset dy="1" result="o"/>
+                <feFlood flood-color="#7c2d12" flood-opacity=".2"/>
+                <feComposite in2="o" operator="in"/>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#gBsoft)">
+              <g class="fin-flutter">
+                <path d="M32 40 C12 22, 0 18, 8 40 C0 60, 12 56, 32 40Z" fill="url(#gBfin)"/>
+              </g>
+              <g class="fin-dorsal">
+                <path d="M58 21 C70 5, 90 8, 92 24 C80 17, 66 17, 58 21Z" fill="url(#gBfin)"/>
+              </g>
+              <path d="M62 55 C70 67, 82 67, 88 54 C78 58, 68 57, 62 55Z" fill="url(#gBfin)"/>
+              <ellipse cx="74" cy="40" rx="35" ry="19" fill="url(#gBbody)"/>
+              <ellipse cx="74" cy="40" rx="35" ry="19" fill="url(#gBvol)"/>
+              <ellipse cx="62" cy="30" rx="13" ry="9" fill="#dc2626" opacity=".9"/>
+              <ellipse cx="84" cy="46" rx="11" ry="8" fill="#ef4444" opacity=".82"/>
+              <ellipse cx="76" cy="36" rx="7" ry="4.5" fill="#991b1b" opacity=".28"/>
+              <ellipse cx="74" cy="50" rx="24" ry="7" fill="#9a3412" opacity=".12"/>
+              <ellipse cx="64" cy="33" rx="10" ry="5" fill="#fff" opacity=".22"/>
+              <path d="M96 32 C104 35, 104 47, 96 50" fill="none" stroke="#a8a29e" stroke-width="1.1" opacity=".45"/>
+              <ellipse cx="100" cy="34" rx="4.8" ry="4.5" fill="#f8fafc"/>
+              <circle cx="101.3" cy="34" r="2.3" fill="#1c1917"/>
+              <circle cx="102.2" cy="32.9" r=".75" fill="#fff"/>
+              <path d="M109 41 q3 2 0 3" fill="none" stroke="#a8a29e" stroke-width="1" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+        <div id="fishC" class="aq-goldfish" title="Golden comet">
+          <svg viewBox="0 0 130 78" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gCbody" x1="0.2" y1="0" x2="0.9" y2="1">
+                <stop offset="0%" stop-color="#fef3c7"/>
+                <stop offset="40%" stop-color="#fbbf24"/>
+                <stop offset="100%" stop-color="#b45309"/>
+              </linearGradient>
+              <radialGradient id="gCvol" cx="36%" cy="28%" r="52%">
+                <stop offset="0%" stop-color="#fffbeb" stop-opacity=".65"/>
+                <stop offset="100%" stop-color="#78350f" stop-opacity=".3"/>
+              </radialGradient>
+              <linearGradient id="gCfin" x1="0" y1="0" x2="1" y2="0.5">
+                <stop offset="0%" stop-color="#fde68a"/>
+                <stop offset="100%" stop-color="#92400e" stop-opacity=".5"/>
+              </linearGradient>
+              <filter id="gCsoft" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="1.1" result="b"/>
+                <feOffset dy="1" result="o"/>
+                <feFlood flood-color="#78350f" flood-opacity=".22"/>
+                <feComposite in2="o" operator="in"/>
+                <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#gCsoft)">
+              <g class="fin-flutter">
+                <path d="M34 39 C8 12, -6 18, 8 39 C-6 58, 8 64, 34 39Z" fill="url(#gCfin)"/>
+                <path d="M36 39 C16 24, 6 26, 14 39 C6 50, 16 52, 36 39Z" fill="#fef3c7" opacity=".35"/>
+              </g>
+              <g class="fin-dorsal">
+                <path d="M60 22 C72 8, 88 10, 90 24 C80 18, 68 18, 60 22Z" fill="url(#gCfin)"/>
+              </g>
+              <path d="M64 52 C70 62, 80 62, 84 52 C78 55, 70 54, 64 52Z" fill="url(#gCfin)"/>
+              <ellipse cx="76" cy="39" rx="32" ry="17" fill="url(#gCbody)"/>
+              <ellipse cx="76" cy="39" rx="32" ry="17" fill="url(#gCvol)"/>
+              <ellipse cx="76" cy="48" rx="22" ry="7" fill="#78350f" opacity=".16"/>
+              <ellipse cx="66" cy="32" rx="12" ry="6" fill="#fffbeb" opacity=".3"/>
+              <g opacity=".18" fill="none" stroke="#78350f" stroke-width=".6">
+                <path d="M58 30 q6 3 0 6"/><path d="M68 28 q6 3 0 6"/><path d="M78 28 q6 3 0 6"/>
+                <path d="M60 40 q6 3 0 6"/><path d="M70 39 q6 3 0 6"/><path d="M80 38 q6 3 0 6"/>
+              </g>
+              <path d="M96 32 C103 35, 103 45, 96 48" fill="none" stroke="#92400e" stroke-width="1" opacity=".35"/>
+              <ellipse cx="100" cy="33" rx="4.4" ry="4.1" fill="#f8fafc"/>
+              <circle cx="101.2" cy="33" r="2.1" fill="#1c1917"/>
+              <circle cx="102" cy="32" r=".7" fill="#fff"/>
+              <path d="M108 39 q2.5 1.6 0 2.6" fill="none" stroke="#92400e" stroke-width="1" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div class="space-y-2 px-4 py-3">
+        <div class="flex items-center justify-between gap-2">
+          <p id="aqMood" class="text-sm font-black text-sky-700">swimming…</p>
+          <p id="aqLastCare" class="truncate text-[11px] font-bold text-sky-400"></p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs">🐟</span>
+            <div class="pet-stat min-w-0 flex-1"><i id="aqHungerBar" style="width:80%;background:#38bdf8"></i></div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs">💧</span>
+            <div class="pet-stat min-w-0 flex-1"><i id="aqHappyBar" style="width:80%;background:#22d3ee"></i></div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button type="button" data-pet-action="feed" class="flex-1 rounded-2xl bg-orange-50 py-2.5 text-sm font-black text-orange-600">🐟 Feed</button>
+          <button type="button" data-pet-action="pet" class="flex-1 rounded-2xl bg-sky-50 py-2.5 text-sm font-black text-sky-600">🫧 Bubbles</button>
+          <button type="button" data-pet-action="play" class="flex-1 rounded-2xl bg-cyan-50 py-2.5 text-sm font-black text-cyan-600">🌊 Play</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1347,20 +1666,20 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   function petStatusBadge(p) {
     if (!p) return "💤";
     if (p.energy < 25) return "😴";
-    if (p.hunger < 30) return "🍎";
-    if (p.happiness < 30) return "🥺";
-    if (p.happiness >= 85 && p.hunger >= 70) return "💕";
-    if (p.happiness >= 55) return "💛";
+    if (p.hunger < 30) return "🐟";
+    if (p.happiness < 30) return "💧";
+    if (p.happiness >= 85 && p.hunger >= 70) return "🫧";
+    if (p.happiness >= 55) return "🌊";
     return "✨";
   }
 
   function petMoodText(p) {
-    if (!p) return "waking up…";
-    if (p.energy < 25) return "sleepy…";
-    if (p.hunger < 30) return "so hungry!";
-    if (p.happiness < 30) return "wants a hug";
-    if (p.happiness >= 85 && p.hunger >= 70) return "super happy!";
-    if (p.happiness >= 55) return "feeling good";
+    if (!p) return "swimming…";
+    if (p.energy < 25) return "resting…";
+    if (p.hunger < 30) return "wants fish food!";
+    if (p.happiness < 30) return "wants bubbles";
+    if (p.happiness >= 85 && p.hunger >= 70) return "happy swimming!";
+    if (p.happiness >= 55) return "swimming happily";
     return "okay";
   }
 
@@ -1370,6 +1689,82 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (p.hunger < 30 || p.happiness < 30) return "pet-sad";
     if (p.happiness >= 80) return "pet-happy";
     return "pet-ok";
+  }
+
+  function petLastCareText(p) {
+    if (!p || !p.last_action || !p.last_action_at) return "Everyone can help care for our fish!";
+    const who = p.last_action_by && profilesCache[p.last_action_by]
+      ? (profilesCache[p.last_action_by].full_name || "A friend")
+      : "A friend";
+    const actionWord = p.last_action === "feed" ? "fed" : p.last_action === "play" ? "played with" : "blew bubbles for";
+    const mins = Math.max(0, Math.round((Date.now() - new Date(p.last_action_at).getTime()) / 60000));
+    const when = mins < 1 ? "just now" : mins < 60 ? mins + "m ago" : Math.floor(mins / 60) + "h ago";
+    return `${who} ${actionWord} me · ${when}`;
+  }
+
+  function syncAquariumPanel(p) {
+    const mood = document.getElementById("aqMood");
+    const last = document.getElementById("aqLastCare");
+    const hunger = document.getElementById("aqHungerBar");
+    const happy = document.getElementById("aqHappyBar");
+    const title = document.getElementById("aqTitle");
+    if (!mood) return;
+    if (!p) {
+      mood.textContent = "set me up in Supabase";
+      if (last) last.textContent = "";
+      if (hunger) hunger.style.width = "0%";
+      if (happy) happy.style.width = "0%";
+      return;
+    }
+    const displayName = (!p.name || p.name === "N1E Buddy" || p.name === "N1E Fish") ? "N1E Goldfish" : p.name;
+    if (title) title.textContent = displayName + " Tank";
+    mood.textContent = petMoodText(p);
+    if (last) last.textContent = petLastCareText(p);
+    if (hunger) hunger.style.width = clampStat(p.hunger) + "%";
+    if (happy) happy.style.width = clampStat(p.happiness) + "%";
+    const school = document.querySelectorAll(".aq-goldfish");
+    school.forEach((el) => {
+      el.classList.remove("slow", "fast");
+      if (p.energy < 25 || p.hunger < 30) el.classList.add("slow");
+      else if (p.happiness >= 80) el.classList.add("fast");
+      el.style.opacity = (p.energy < 25 || p.hunger < 30 || p.happiness < 30) ? "0.88" : "1";
+    });
+  }
+
+  function spawnAquariumBubbles(count = 6) {
+    const layer = document.getElementById("aqBubbles");
+    if (!layer) return;
+    for (let i = 0; i < count; i++) {
+      const b = document.createElement("span");
+      b.className = "aq-bubble";
+      const size = 6 + Math.random() * 12;
+      b.style.width = size + "px";
+      b.style.height = size + "px";
+      b.style.left = (10 + Math.random() * 80) + "%";
+      b.style.animationDuration = (2.2 + Math.random() * 2.5) + "s";
+      b.style.animationDelay = (Math.random() * 0.4) + "s";
+      layer.appendChild(b);
+      setTimeout(() => b.remove(), 5000);
+    }
+  }
+
+  let aqBubbleTimer = null;
+  function openAquarium() {
+    const modal = document.getElementById("aquariumModal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    syncAquariumPanel(classPet);
+    spawnAquariumBubbles(8);
+    if (aqBubbleTimer) clearInterval(aqBubbleTimer);
+    aqBubbleTimer = setInterval(() => {
+      if (modal.classList.contains("hidden")) return;
+      spawnAquariumBubbles(2);
+    }, 1800);
+  }
+  function closeAquarium() {
+    const modal = document.getElementById("aquariumModal");
+    if (modal) modal.classList.add("hidden");
+    if (aqBubbleTimer) { clearInterval(aqBubbleTimer); aqBubbleTimer = null; }
   }
 
   function renderClassPet() {
@@ -1385,42 +1780,33 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const happyBar = document.getElementById("petHappyBar");
     const lastEl = document.getElementById("petLastCare");
 
-    const baseFaceClass = "relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm";
+    const baseFaceClass = "relative flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-sky-100 to-sky-200 shadow-sm";
 
     if (!p) {
       if (faceImg) faceImg.style.opacity = "0.5";
       if (faceBadge) faceBadge.textContent = "💤";
       face.className = baseFaceClass;
-      nameEl.textContent = "N1E Buddy";
+      nameEl.textContent = "N1E Goldfish";
       moodEl.textContent = "set me up in Supabase";
       hungerBar.style.width = "0%";
       happyBar.style.width = "0%";
       lastEl.textContent = "Run the class_pet SQL once, then refresh.";
+      syncAquariumPanel(null);
       return;
     }
 
     if (faceImg) {
-      faceImg.src = "mascot.png";
       faceImg.style.opacity = (p.energy < 25 || p.hunger < 30 || p.happiness < 30) ? "0.85" : "1";
     }
     if (faceBadge) faceBadge.textContent = petStatusBadge(p);
     face.className = baseFaceClass + " " + petFaceClass(p);
-    nameEl.textContent = p.name || "N1E Buddy";
+    const displayName = (!p.name || p.name === "N1E Buddy" || p.name === "N1E Fish") ? "N1E Goldfish" : p.name;
+    nameEl.textContent = displayName;
     moodEl.textContent = petMoodText(p);
     hungerBar.style.width = clampStat(p.hunger) + "%";
     happyBar.style.width = clampStat(p.happiness) + "%";
-
-    if (p.last_action && p.last_action_at) {
-      const who = p.last_action_by && profilesCache[p.last_action_by]
-        ? (profilesCache[p.last_action_by].full_name || "A friend")
-        : "A friend";
-      const actionWord = p.last_action === "feed" ? "fed" : p.last_action === "play" ? "played with" : "petted";
-      const mins = Math.max(0, Math.round((Date.now() - new Date(p.last_action_at).getTime()) / 60000));
-      const when = mins < 1 ? "just now" : mins < 60 ? mins + "m ago" : Math.floor(mins / 60) + "h ago";
-      lastEl.textContent = `${who} ${actionWord} me · ${when}`;
-    } else {
-      lastEl.textContent = "Everyone can help take care of me!";
-    }
+    lastEl.textContent = petLastCareText(p);
+    syncAquariumPanel(p);
   }
 
   async function ensureClassPetRow() {
@@ -1434,7 +1820,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (!data) {
       const seed = {
         id: 1,
-        name: "N1E Buddy",
+        name: "N1E Goldfish",
         hunger: 80,
         happiness: 80,
         energy: 80,
@@ -1477,13 +1863,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   async function careForPet(action) {
     if (!currentUser || !supabaseClient || petActionLock) return;
     if (!classPet) {
-      showToast("Pet not ready. Ask an adult to run the class_pet SQL.", null, null, 4000);
+      showToast("Fish not ready. Ask an adult to run the class_pet SQL.", null, null, 4000);
       return;
     }
     const now = Date.now();
     if (now - lastPetActionAt < PET_COOLDOWN_MS) {
       const wait = Math.ceil((PET_COOLDOWN_MS - (now - lastPetActionAt)) / 1000);
-      showToast(`Wait ${wait}s — Buddy is catching a breath!`, null, null, 2500);
+      showToast(`Wait ${wait}s — the fish is resting!`, null, null, 2500);
       return;
     }
 
@@ -1494,7 +1880,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     let { hunger, happiness, energy } = fresh;
     if (action === "feed") {
       if (hunger >= 95) {
-        showToast("Buddy is already full! Try a hug or play.", null, null, 3000);
+        showToast("Already full! Try bubbles or play.", null, null, 3000);
         return;
       }
       hunger = clampStat(hunger + 22);
@@ -1505,7 +1891,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       energy = clampStat(energy + 4);
     } else if (action === "play") {
       if (energy < 15) {
-        showToast("Buddy is too sleepy to play. Feed or pet first!", null, null, 3000);
+        showToast("Too sleepy to play. Feed or add bubbles first!", null, null, 3000);
         return;
       }
       happiness = clampStat(happiness + 20);
@@ -1542,18 +1928,39 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     classPet = applyPetDecay(data);
     renderClassPet();
     const msgs = {
-      feed: "🍎 Yum! Buddy feels less hungry.",
-      pet: "🤗 Buddy loves the hugs!",
-      play: "🎾 That was fun!",
+      feed: "🐟 Yum! The fish is less hungry.",
+      pet: "🫧 Bubble time! The fish is happier.",
+      play: "🌊 Splash! That was fun!",
     };
     showToast(msgs[action] || "Done!", null, null, 2500);
+    // Extra bubbles in the big tank when caring
+    const aqOpen = document.getElementById("aquariumModal");
+    if (aqOpen && !aqOpen.classList.contains("hidden")) {
+      spawnAquariumBubbles(action === "pet" ? 14 : action === "play" ? 10 : 6);
+    }
   }
 
   document.getElementById("classPetCard")?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-pet-action]");
-    if (!btn) return;
-    e.preventDefault();
-    careForPet(btn.getAttribute("data-pet-action"));
+    if (btn) {
+      e.preventDefault();
+      careForPet(btn.getAttribute("data-pet-action"));
+      return;
+    }
+    // Tap the mini card (especially the face) to open the big tank
+    if (e.target.closest("#petFaceBtn") || e.target.closest("#classPetCard")) {
+      openAquarium();
+    }
+  });
+
+  document.getElementById("aquariumCloseBtn")?.addEventListener("click", closeAquarium);
+  document.getElementById("aquariumModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "aquariumModal") closeAquarium();
+    const btn = e.target.closest("[data-pet-action]");
+    if (btn) {
+      e.preventDefault();
+      careForPet(btn.getAttribute("data-pet-action"));
+    }
   });
 
   // ---------- Class events + birthdays ("Upcoming" strip) ----------
