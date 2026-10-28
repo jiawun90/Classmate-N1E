@@ -550,9 +550,13 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   <form id="sendForm" class="relative mt-2 mb-2 flex flex-none items-end gap-2 rounded-[1.75rem] border-4 border-white bg-white p-2">
     <div id="mentionDropdown" class="hidden absolute bottom-full left-2 z-30 mb-1 max-h-40 w-56 overflow-y-auto rounded-2xl border-2 border-violet-100 bg-white shadow-lg"></div>
-    <input type="file" id="photoInput" accept="image/*" class="hidden" />
+    <input type="file" id="photoInput" accept="image/*,.gif,image/gif" class="hidden" />
+    <input type="file" id="videoInput" accept="video/*,video/mp4,video/webm,video/quicktime" class="hidden" />
+    <input type="file" id="audioFileInput" accept="audio/*,audio/mpeg,.mp3,.m4a,.wav,.ogg" class="hidden" />
     <input type="file" id="avatarInput" accept="image/*" class="hidden" />
-    <button type="button" id="photoBtn" title="Send a photo" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
+    <button type="button" id="photoBtn" title="Send a photo or GIF" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">📷</button>
+    <button type="button" id="videoBtn" title="Send a short video" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎬</button>
+    <button type="button" id="audioFileBtn" title="Upload an audio file (mp3)" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎵</button>
     <button type="button" id="micBtn" title="Record a voice message" class="h-12 w-12 flex-none rounded-2xl bg-violet-50 text-xl">🎤</button>
     <textarea id="messageInput" maxlength="500" rows="1" placeholder="Share something fun..." class="max-h-32 min-h-12 flex-1 resize-none overflow-y-auto rounded-2xl bg-violet-50 px-4 py-3 font-bold outline-none" style="field-sizing: content;"></textarea>
     <button type="submit" style="background:var(--accent)" class="h-12 flex-none rounded-2xl px-5 font-black text-white">Send</button>
@@ -797,8 +801,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     if (error) {
       console.error("messages insert error:", error);
       let msg = error.message || JSON.stringify(error);
-      if (/audio_url|column/i.test(msg)) {
-        msg += "\n\n请在 SQL Editor 执行:\nalter table messages add column if not exists audio_url text;";
+      if (/audio_url|video_url|image_url|column/i.test(msg)) {
+        msg += "\n\n请在 SQL Editor 执行:\nalter table messages add column if not exists image_url text;\nalter table messages add column if not exists audio_url text;\nalter table messages add column if not exists video_url text;";
       }
       alert("Save message failed: " + msg);
       return;
@@ -843,21 +847,49 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     });
   }
 
+  const MAX_IMAGE_BYTES = 12 * 1024 * 1024; // 12MB photos / GIFs
+  const MAX_VIDEO_BYTES = 40 * 1024 * 1024; // 40MB short videos
+  const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15MB mp3 / audio files
+
   async function uploadMedia(file, kind) {
     if (!currentUser || !supabaseClient) {
       alert("Please sign in first.");
       return;
     }
     if (!file || !file.size) {
-      alert("录音是空的。请至少说 1–2 秒再按停止。");
+      alert(kind === "audio" ? "录音是空的。请至少说 1–2 秒再按停止。" : "文件是空的，请重选。");
       return;
     }
-    const fallbackExt = kind === "audio" ? "webm" : "jpg";
+    if (kind === "image" && file.size > MAX_IMAGE_BYTES) {
+      alert("图片/GIF 太大了（上限约 12MB）。请选小一点的文件。");
+      return;
+    }
+    if (kind === "video" && file.size > MAX_VIDEO_BYTES) {
+      alert("视频太大了（上限约 40MB）。请选更短的片段。");
+      return;
+    }
+    if (kind === "audio" && file.size > MAX_AUDIO_BYTES) {
+      alert("音频太大了（上限约 15MB）。请选短一点的音乐或录音。");
+      return;
+    }
+
+    const fallbackExt = kind === "audio" ? "mp3" : kind === "video" ? "mp4" : "jpg";
     const ext = (file.name.split(".").pop() || fallbackExt).toLowerCase().replace(/[^a-z0-9]/g, "") || fallbackExt;
     const path = `${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    let contentType = file.type || (kind === "audio" ? "audio/webm" : "image/jpeg");
+    let contentType = file.type || (kind === "audio" ? "audio/mpeg" : kind === "video" ? "video/mp4" : "image/jpeg");
     if (kind === "audio" && (!contentType || contentType === "application/octet-stream")) {
-      contentType = ext === "m4a" || ext === "mp4" ? "audio/mp4" : ext === "ogg" ? "audio/ogg" : "audio/webm";
+      if (ext === "mp3" || ext === "mpeg") contentType = "audio/mpeg";
+      else if (ext === "m4a" || ext === "mp4") contentType = "audio/mp4";
+      else if (ext === "wav") contentType = "audio/wav";
+      else if (ext === "ogg") contentType = "audio/ogg";
+      else if (ext === "webm") contentType = "audio/webm";
+      else contentType = "audio/mpeg";
+    }
+    if (kind === "video" && (!contentType || contentType === "application/octet-stream")) {
+      contentType = ext === "webm" ? "video/webm" : ext === "mov" ? "video/quicktime" : "video/mp4";
+    }
+    if (kind === "image" && (ext === "gif" || contentType === "image/gif")) {
+      contentType = "image/gif";
     }
 
     let result = await supabaseClient.storage.from(MEDIA_BUCKET).upload(path, file, {
@@ -866,7 +898,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     });
     let uploadError = result.error;
 
-    if (uploadError && kind === "audio") {
+    // Only retry as webm for recorded blobs, not for real mp3/m4a files
+    if (uploadError && kind === "audio" && (ext === "webm" || !file.type || file.type === "audio/webm")) {
       result = await supabaseClient.storage.from(MEDIA_BUCKET).upload(
         path.replace(/\.[^.]+$/, ".webm"),
         file,
@@ -885,6 +918,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     const { data: urlData } = supabaseClient.storage.from(MEDIA_BUCKET).getPublicUrl(finalPath);
     if (kind === "image") {
       await sendMessage({ image_url: urlData.publicUrl });
+    } else if (kind === "video") {
+      await sendMessage({ video_url: urlData.publicUrl });
     } else {
       await sendMessage({ audio_url: urlData.publicUrl });
     }
@@ -909,6 +944,50 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
     } finally {
       photoBtn.disabled = false;
       photoBtn.textContent = "📷";
+    }
+  };
+
+  const videoBtn = document.getElementById("videoBtn");
+  const videoInput = document.getElementById("videoInput");
+  videoBtn.onclick = () => {
+    if (!currentUser) return;
+    videoInput.click();
+  };
+  videoInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    videoBtn.disabled = true;
+    videoBtn.textContent = "⏳";
+    try {
+      await uploadMedia(file, "video");
+    } catch (err) {
+      alert("Upload failed: " + (err.message || err));
+    } finally {
+      videoBtn.disabled = false;
+      videoBtn.textContent = "🎬";
+    }
+  };
+
+  const audioFileBtn = document.getElementById("audioFileBtn");
+  const audioFileInput = document.getElementById("audioFileInput");
+  audioFileBtn.onclick = () => {
+    if (!currentUser) return;
+    audioFileInput.click();
+  };
+  audioFileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    audioFileBtn.disabled = true;
+    audioFileBtn.textContent = "⏳";
+    try {
+      await uploadMedia(file, "audio");
+    } catch (err) {
+      alert("Upload failed: " + (err.message || err));
+    } finally {
+      audioFileBtn.disabled = false;
+      audioFileBtn.textContent = "🎵";
     }
   };
 
@@ -1343,8 +1422,16 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
   // ---------- Reply ----------
   function messagePreview(m) {
     if (m.content) return m.content.length > 60 ? m.content.slice(0, 60) + "…" : m.content;
-    if (m.image_url) return "📷 Photo";
-    if (m.audio_url) return "🎤 Voice message";
+    if (m.video_url) return "🎬 Video";
+    if (m.image_url) {
+      const u = String(m.image_url).toLowerCase();
+      return u.includes(".gif") || u.includes("image/gif") ? "✨ GIF" : "📷 Photo";
+    }
+    if (m.audio_url) {
+      const u = String(m.audio_url).toLowerCase();
+      if (u.includes(".mp3") || u.includes("audio/mpeg")) return "🎵 Audio";
+      return "🎤 Voice message";
+    }
     return "";
   }
   function startReply(id) {
@@ -1630,7 +1717,7 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       return;
     }
     // Best-effort cleanup of any attached media file (ignored if it fails).
-    const mediaUrl = m.image_url || m.audio_url;
+    const mediaUrl = m.image_url || m.audio_url || m.video_url;
     if (mediaUrl) {
       const marker = `/${MEDIA_BUCKET}/`;
       const idx = mediaUrl.indexOf(marker);
@@ -2175,6 +2262,9 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
       }
       if (m.image_url) {
         parts.push(`<img src="${escapeHtml(m.image_url)}" alt="shared photo" data-action="lightbox" data-url="${escapeHtml(m.image_url)}" class="mb-1 max-h-64 w-full cursor-zoom-in rounded-2xl border-2 border-white object-cover shadow-sm" loading="lazy" />`);
+      }
+      if (m.video_url) {
+        parts.push(`<video controls playsinline preload="metadata" src="${escapeHtml(m.video_url)}" class="mb-1 max-h-72 w-full rounded-2xl border-2 border-white bg-black/80 object-contain shadow-sm"></video>`);
       }
       if (m.audio_url) {
         parts.push(`<div class="mb-1 flex items-center gap-2 rounded-2xl border-2 border-white/60 bg-white/40 px-2 py-1.5"><span class="text-lg">🎤</span><audio controls src="${escapeHtml(m.audio_url)}" class="h-9 w-full max-w-[200px]"></audio></div>`);
