@@ -1553,10 +1553,106 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function mentionsMe(content) {
     if (!content || !currentUser) return false;
-    const myName = profilesCache[currentUser.id]?.full_name;
-    if (!myName) return false;
-    const escaped = myName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp("@" + escaped + "(?=[\\s.,!?;:]|$)").test(content);
+    const names = [
+      profilesCache[currentUser.id]?.full_name,
+      currentUser.user_metadata?.full_name,
+    ].filter(Boolean);
+    return names.some((myName) => {
+      const escaped = String(myName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp("@" + escaped + "(?=[\\s.,!?;:]|$)", "i").test(content);
+    });
+  }
+
+  // ---------- In-page message alerts (sound + toast + browser banner while tab is open) ----------
+  let notifyPermissionAsked = false;
+
+  function ensureNotifyPermission() {
+    if (notifyPermissionAsked) return;
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "default") return;
+    notifyPermissionAsked = true;
+    // Soft ask — browsers may still require a user gesture; safe to call after login.
+    try { Notification.requestPermission().catch(() => {}); } catch (_) {}
+  }
+
+  function playNotifySound(important) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = important ? 880 : 640;
+      gain.gain.value = important ? 0.1 : 0.06;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t0 = ctx.currentTime;
+      osc.start(t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + (important ? 0.35 : 0.22));
+      osc.stop(t0 + (important ? 0.36 : 0.23));
+      setTimeout(() => { try { ctx.close(); } catch (_) {} }, 500);
+    } catch (_) {}
+  }
+
+  function showBrowserNotification(title, body) {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    // Only when the tab is in the background — avoid double-noise while actively reading.
+    if (!document.hidden && document.hasFocus()) return;
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: "mascot.png",
+        tag: "n1e-board-msg",
+        silent: true, // we already play our own soft chime
+      });
+      n.onclick = () => {
+        try { window.focus(); } catch (_) {}
+        n.close();
+      };
+      setTimeout(() => { try { n.close(); } catch (_) {} }, 6000);
+    } catch (_) {}
+  }
+
+  function shortPreview(row) {
+    if (row.content && String(row.content).trim()) {
+      const t = String(row.content).trim();
+      return t.length > 80 ? t.slice(0, 80) + "…" : t;
+    }
+    if (row.video_url) return "sent a video 🎬";
+    if (row.image_url) return "sent a photo 📷";
+    if (row.audio_url) return "sent audio 🎵";
+    return "sent a message";
+  }
+
+  function isReplyToMe(row) {
+    if (!row || !row.reply_to || !currentUser) return false;
+    const orig = latestRows.find((m) => String(m.id) === String(row.reply_to));
+    return !!(orig && String(orig.user_id) === String(currentUser.id));
+  }
+
+  function notifyIncomingMessage(row) {
+    if (!row || !currentUser) return;
+    if (String(row.user_id) === String(currentUser.id)) return;
+
+    const who = row.user_name || "Someone";
+    const mention = mentionsMe(row.content);
+    const reply = isReplyToMe(row);
+    const important = mention || reply;
+    const preview = shortPreview(row);
+
+    let toastMsg;
+    if (mention) toastMsg = `🔔 ${who} mentioned you`;
+    else if (reply) toastMsg = `💬 ${who} replied to you`;
+    else toastMsg = `💬 ${who}: ${preview}`;
+
+    playNotifySound(important);
+    showToast(toastMsg, null, null, important ? 6000 : 4000);
+    showBrowserNotification(
+      mention ? `${who} mentioned you` : reply ? `${who} replied` : `New message from ${who}`,
+      preview
+    );
   }
 
   // ---------- Read receipts ----------
@@ -2333,14 +2429,15 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
 
   function addRealtimeMessage(row) {
     if (!row) return;
-    const list = document.getElementById("messageList");
     const exists = latestRows.some((m) => String(m.id) === String(row.id));
     if (exists) return;
+    // Check reply target before inserting this row into the list.
+    const replyToMe = isReplyToMe(row);
     latestRows = [row, ...latestRows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     renderMessages(latestRows);
-    if (row.user_id !== currentUser.id && mentionsMe(row.content)) {
-      showToast(`🔔 ${row.user_name || "Someone"} mentioned you`, null, null, 5000);
-    }
+    // Tag reply flag for notify helper (isReplyToMe still works after insert too).
+    if (replyToMe) row._replyToMe = true;
+    notifyIncomingMessage(row);
   }
 
   function updateRealtimeMessage(row) {
@@ -2409,6 +2506,8 @@ Resources:`;for(let t of c){if(!t||typeof t!=`string`)throw Error(`@supabase/aut
         setupReadStateRealtime();
         setupPetRealtime();
         renderUpcoming();
+        // Ask once for browser banners when the tab is in the background.
+        setTimeout(() => ensureNotifyPermission(), 800);
 
         const onlineBadge = document.getElementById("onlineBadge");
         presenceChannel = supabaseClient.channel("board-presence", { config: { presence: { key: nextUser.id } } });
